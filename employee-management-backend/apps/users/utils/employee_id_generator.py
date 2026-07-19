@@ -15,6 +15,7 @@ def generate_employee_id():
 
     last_user = (
         User.objects
+        .filter(employee_id__regex=r'^EMP\d{6}$')
         .order_by("-employee_id")
         .first()
     )
@@ -22,6 +23,8 @@ def generate_employee_id():
     if not last_user:
         return "EMP000001"
 
-    last_number = int(last_user.employee_id.replace("EMP", ""))
-
-    return f"EMP{last_number + 1:06d}"
+    try:
+        last_number = int(last_user.employee_id.replace("EMP", ""))
+        return f"EMP{last_number + 1:06d}"
+    except ValueError:
+        return "EMP000001"

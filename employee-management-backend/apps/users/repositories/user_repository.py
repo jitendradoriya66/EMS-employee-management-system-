@@ -11,7 +11,7 @@ class UserRepository:
 
     @staticmethod
     def create_user(**validated_data):
-        return User.objects.create(**validated_data)
+        return User.objects.create_user(**validated_data)
 
     @staticmethod
     def get_by_id(user_id):
