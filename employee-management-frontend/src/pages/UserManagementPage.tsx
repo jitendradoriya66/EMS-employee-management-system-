@@ -344,7 +344,7 @@ export const UserManagementPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="overflow-x-auto scrollbar-soft">
+            <div className="overflow-x-auto overflow-y-visible scrollbar-soft min-h-[350px] pb-16">
               <table className="min-w-[1080px] w-full divide-y divide-border text-left">
                 <thead className="bg-background/80">
                   <tr className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">
