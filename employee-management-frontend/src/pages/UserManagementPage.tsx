@@ -107,7 +107,11 @@ export const UserManagementPage: React.FC = () => {
   const [userToEdit, setUserToEdit] = useState<UserAccount | null>(null)
   const [editFormData, setEditFormData] = useState({ name: '', email: '', department: '' })
   
-  const { users, approveUser, rejectUser, toggleUserStatus, deleteUser, updateUserRole, updateUserDetails } = useAuth()
+  const { users, fetchUsers, approveUser, rejectUser, toggleUserStatus, deleteUser, updateUserRole, updateUserDetails } = useAuth()
+
+  useEffect(() => {
+    fetchUsers()
+  }, [])
 
   const showToast = (message: string) => {
     setToast(message)

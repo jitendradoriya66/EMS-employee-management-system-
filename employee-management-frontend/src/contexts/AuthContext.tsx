@@ -8,6 +8,7 @@ interface AuthContextType {
   isLoading: boolean
   user: UserAccount | null
   users: UserAccount[]
+  fetchUsers: () => Promise<UserAccount[]>
   login: (email: string, password: string, rememberMe?: boolean) => Promise<UserAccount>
   register: (firstName: string, lastName: string, email: string, phone: string, password: string) => Promise<UserAccount>
   logout: () => void
@@ -37,7 +38,7 @@ export const mapBackendUserToAccount = (backendUser: any): UserAccount => {
     password: '', // Don't store passwords in state
     department: 'Unassigned', // Backend doesn't provide this by default
     role: backendUser.is_superuser ? 'super_admin' : (backendUser.is_staff ? 'admin_hr' : 'employee'),
-    approvalStatus: 'approved',
+    approvalStatus: backendUser.is_active ? 'approved' : 'pending',
     accountStatus: backendUser.is_active ? 'active' : 'inactive',
     registrationDate: backendUser.date_joined || new Date().toISOString(),
     lastLogin: null, // Update if backend provides last_login
@@ -50,16 +51,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<UserAccount | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  const fetchUsers = async () => {
+    try {
+      const response = await apiClient.get('/api/v1/users/');
+      const allUsers = response.data.results || response.data;
+      const backendUsers = Array.isArray(allUsers) ? allUsers : [];
+      setUsers(backendUsers.map(mapBackendUserToAccount));
+      return backendUsers;
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      return [];
+    }
+  }
+
   const fetchCurrentUser = async (token: string, storage: Storage = localStorage): Promise<UserAccount | null> => {
     try {
       const decoded = jwtDecode<DecodedToken>(token);
       const userId = decoded.user_id;
       
-      // We have the ID, now we can fetch the users list to find ours
-      // Or fetch from a /me/ endpoint if we had one. Let's fetch all and filter.
-      const response = await apiClient.get('/api/v1/users/');
-      const allUsers = response.data.results || response.data; // Handle pagination if present
-      const backendUsers = Array.isArray(allUsers) ? allUsers : [];
+      const backendUsers = await fetchUsers();
       
       const currentUser = backendUsers.find((u: any) => u.id === userId);
       
@@ -69,8 +79,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsAuthenticated(true);
         storage.setItem(SESSION_STORAGE_KEY, mappedUser.email);
         
-        // Also update the users state
-        setUsers(backendUsers.map(mapBackendUserToAccount));
         return mappedUser;
       } else {
         throw new Error('User not found in list');
@@ -285,6 +293,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isLoading,
       user,
       users,
+      fetchUsers,
       login,
       register,
       logout,
