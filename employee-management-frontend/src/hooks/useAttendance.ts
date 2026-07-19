@@ -47,7 +47,52 @@ export const useAttendance = () => {
 
   useEffect(() => {
     if (user) {
-      fetchRecords()
+        fetchRecords()
+        
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host; // Replace with actual backend if needed
+        // Assuming backend runs on port 8000 locally, or same host in prod
+        const wsUrl = import.meta.env.VITE_API_URL 
+          ? import.meta.env.VITE_API_URL.replace('http', 'ws') + '/ws/attendance/'
+          : `${protocol}//${host}/ws/attendance/`;
+
+        const ws = new WebSocket(wsUrl);
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.message && data.message.data) {
+                    const newRecord = data.message.data;
+                    
+                    const formattedRecord = {
+                        id: newRecord.id,
+                        employeeId: newRecord.employee?.id || '',
+                        employeeName: newRecord.employee ? `${newRecord.employee.firstName} ${newRecord.employee.lastName}` : 'Unknown',
+                        department: newRecord.employee?.department || 'Unassigned',
+                        date: newRecord.date,
+                        checkIn: newRecord.checkIn,
+                        checkOut: newRecord.checkOut,
+                        hoursWorked: newRecord.hoursWorked,
+                        status: newRecord.status,
+                    };
+
+                    setRecords(prev => {
+                        const exists = prev.find(r => r.id === formattedRecord.id);
+                        if (exists) {
+                            return prev.map(r => r.id === formattedRecord.id ? formattedRecord : r);
+                        } else {
+                            return [formattedRecord, ...prev];
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error("WebSocket message parsing error:", e);
+            }
+        };
+
+        return () => {
+            ws.close();
+        };
     }
   }, [user])
 

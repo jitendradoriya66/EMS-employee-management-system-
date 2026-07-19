@@ -415,33 +415,46 @@ export const UserManagementPage: React.FC = () => {
                           </Button>
                           <AnimatePresence>
                             {openMenuId === user.id && (
-                              <motion.div
-                                initial={{ opacity: 0, y: -8, scale: 0.98 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                                className="absolute right-0 top-full z-20 mt-2 w-52 rounded-3xl border border-border bg-card p-sm shadow-2xl"
-                              >
-                                <button onClick={() => handleRowAction(user, 'view')} className="flex w-full items-center gap-sm rounded-2xl px-md py-sm text-sm text-text-primary hover:bg-background">
-                                  <Eye className="h-4 w-4" />
-                                  View
-                                </button>
-                                <button onClick={() => handleRowAction(user, 'edit')} className="flex w-full items-center gap-sm rounded-2xl px-md py-sm text-sm text-text-primary hover:bg-background">
-                                  <Pencil className="h-4 w-4" />
-                                  Edit
-                                </button>
-                                <button onClick={() => handleRowAction(user, 'role')} className="flex w-full items-center gap-sm rounded-2xl px-md py-sm text-sm text-text-primary hover:bg-background">
-                                  <UserCog className="h-4 w-4" />
-                                  Change role
-                                </button>
-                                <button onClick={() => handleRowAction(user, 'toggle')} className="flex w-full items-center gap-sm rounded-2xl px-md py-sm text-sm text-text-primary hover:bg-background">
-                                  <Power className="h-4 w-4" />
-                                  {user.accountStatus === 'active' ? 'Deactivate' : 'Activate'}
-                                </button>
-                                <button onClick={() => handleRowAction(user, 'delete')} className="flex w-full items-center gap-sm rounded-2xl px-md py-sm text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30">
-                                  <Trash2 className="h-4 w-4" />
-                                  Delete
-                                </button>
-                              </motion.div>
+                              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                                <motion.div
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0 }}
+                                  className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                                  onClick={() => setOpenMenuId(null)}
+                                />
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                                  className="relative z-10 w-full max-w-sm rounded-[32px] border border-border bg-card p-6 shadow-2xl"
+                                >
+                                  <div className="mb-4 pb-4 border-b border-border">
+                                    <h3 className="text-lg font-semibold text-text-primary">Manage User</h3>
+                                    <p className="text-sm text-text-secondary">{user.name}</p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <button onClick={() => handleRowAction(user, 'view')} className="flex w-full items-center gap-md rounded-2xl px-md py-md text-sm font-medium text-text-primary hover:bg-background transition-colors">
+                                      <Eye className="h-5 w-5 text-text-secondary" /> View Profile
+                                    </button>
+                                    <button onClick={() => handleRowAction(user, 'edit')} className="flex w-full items-center gap-md rounded-2xl px-md py-md text-sm font-medium text-text-primary hover:bg-background transition-colors">
+                                      <Pencil className="h-5 w-5 text-text-secondary" /> Edit User
+                                    </button>
+                                    <button onClick={() => handleRowAction(user, 'role')} className="flex w-full items-center gap-md rounded-2xl px-md py-md text-sm font-medium text-text-primary hover:bg-background transition-colors">
+                                      <UserCog className="h-5 w-5 text-text-secondary" /> Change Role
+                                    </button>
+                                    <button onClick={() => handleRowAction(user, 'toggle')} className="flex w-full items-center gap-md rounded-2xl px-md py-md text-sm font-medium text-text-primary hover:bg-background transition-colors">
+                                      <Power className="h-5 w-5 text-text-secondary" /> {user.accountStatus === 'active' ? 'Deactivate Account' : 'Activate Account'}
+                                    </button>
+                                    <button onClick={() => handleRowAction(user, 'delete')} className="flex w-full items-center gap-md rounded-2xl px-md py-md text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors">
+                                      <Trash2 className="h-5 w-5" /> Delete User
+                                    </button>
+                                  </div>
+                                  <div className="mt-6 pt-4 border-t border-border flex justify-end">
+                                    <Button variant="secondary" onClick={() => setOpenMenuId(null)}>Close</Button>
+                                  </div>
+                                </motion.div>
+                              </div>
                             )}
                           </AnimatePresence>
                         </div>
