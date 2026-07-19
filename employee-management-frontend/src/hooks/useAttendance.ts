@@ -64,6 +64,35 @@ export const useAttendance = () => {
       })
       await fetchRecords()
     } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const checkOut = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      const activeRecord = records.find(r => r.date === today && !r.checkOut)
+      
+      if (!activeRecord) {
+        console.warn('No active check-in found for today')
+        return
+      }
+
+      const time = new Date().toTimeString().split(' ')[0].substring(0, 5) // HH:MM
+      
+      // Calculate basic hours worked
+      const [inHour, inMin] = activeRecord.checkIn.split(':').map(Number)
+      const [outHour, outMin] = time.split(':').map(Number)
+      const hoursWorked = (outHour + outMin / 60) - (inHour + inMin / 60)
+
+      await apiClient.patch(`/api/v1/attendance/${activeRecord.id}/`, {
+        checkOut: time,
+        hoursWorked: Math.max(0, hoursWorked),
+      })
+      
+      await fetchRecords()
+    } catch (err) {
+      console.error(err)
     }
   }
 

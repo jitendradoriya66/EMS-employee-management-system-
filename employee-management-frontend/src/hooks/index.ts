@@ -61,6 +61,25 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
         setStoredValue(valueToStore)
         window.localStorage.setItem(key, JSON.stringify(valueToStore))
       } catch {
+        console.error('Failed to save to localStorage')
+      }
+    },
+    [key, storedValue]
+  )
+
+  return [storedValue, setValue] as const
+}
+
+export function useDebounce<T>(value: T, delay: number) {
+  const [debouncedValue, setDebouncedValue] = useState(value)
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+
+    return () => clearTimeout(handler)
+  }, [value, delay])
 
   return debouncedValue
 }

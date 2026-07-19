@@ -30,6 +30,26 @@ export const useAnnouncements = () => {
         body: item.message || '',
       })) : [])
     } catch (err) {
+      console.error('Failed to fetch announcements', err)
+      setAnnouncements([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const broadcastAnnouncement = async (data: { title: string, message: string }) => {
+    try {
+      await apiClient.post('/api/v1/notifications/broadcast/', data)
+      await fetchAnnouncements()
+    } catch (err) {
+      console.error('Failed to broadcast announcement', err)
+      throw err
+    }
+  }
+
+  useEffect(() => {
+    fetchAnnouncements()
+  }, [])
 
   return { announcements, loading, fetchAnnouncements, broadcastAnnouncement }
 }

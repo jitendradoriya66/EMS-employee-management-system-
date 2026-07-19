@@ -11,6 +11,7 @@ export function useLeaveRequests() {
       setLeaveRequests(res);
       setLoading(false);
     }).catch(err => {
+      console.error(err);
       setLoading(false);
     });
   }, []);

@@ -34,6 +34,16 @@ export const useTasks = () => {
         projectName: item.projectName,
       })) : [])
     } catch (err) {
+      console.error('Failed to fetch tasks', err)
+      setTasks([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchTasks()
+  }, [])
 
   return { tasks, loading, fetchTasks }
 }

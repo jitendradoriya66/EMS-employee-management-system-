@@ -18,6 +18,7 @@ export function useDepartments() {
         managerName: item.managerName,
       })) : []);
     } catch (err) {
+      console.error(err);
       setDepartments([]);
     } finally {
       setLoading(false);
@@ -29,6 +30,7 @@ export function useDepartments() {
       await apiClient.post('/api/v1/departments/', departmentData);
       await fetchDepartments();
     } catch (err) {
+      console.error('Failed to add department', err);
       throw err;
     }
   };
