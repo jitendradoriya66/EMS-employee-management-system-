@@ -34,10 +34,14 @@ function formatDate(value: string | null) {
 }
 
 export const ApprovalsPage: React.FC = () => {
-  const { users, approveUser, rejectUser } = useAuth()
+  const { users, fetchUsers, approveUser, rejectUser } = useAuth()
   const [search, setSearch] = useState('')
   const [roleSelection, setRoleSelection] = useState<Record<string, UserRole>>({})
   const [focusedUser, setFocusedUser] = useState<UserAccount | null>(null)
+
+  React.useEffect(() => {
+    fetchUsers()
+  }, [])
 
   const pendingUsers = useMemo(() => {
     const query = search.trim().toLowerCase()
