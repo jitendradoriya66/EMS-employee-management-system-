@@ -1,0 +1,259 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply box-border;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-background text-text-primary;
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-feature-settings: "rounding" 1;
+    transition: background-color 0.25s ease, color 0.25s ease;
+    background-image:
+      radial-gradient(circle at top left, rgba(14, 165, 233, 0.14), transparent 26%),
+      radial-gradient(circle at top right, rgba(79, 70, 229, 0.12), transparent 28%),
+      radial-gradient(circle at bottom, rgba(16, 185, 129, 0.08), transparent 32%);
+    background-attachment: fixed;
+  }
+
+  /* Remove default focus styles and add custom ones */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary-500;
+  }
+
+  /* Light Theme (Default) */
+  :root,
+  .theme-light {
+    --bg-primary: #4F46E5;
+    --bg-primary-50: #EEF2FF;
+    --bg-primary-100: #E0E7FF;
+    --bg-primary-600: #4338CA;
+    --bg-primary-700: #3730A3;
+    --bg-background: #F8FAFC;
+    --bg-sidebar: #0F172A;
+    --bg-card: #FFFFFF;
+    --bg-border: #E2E8F0;
+    --text-primary: #0F172A;
+    --text-secondary: #64748B;
+  }
+
+  /* Dark Theme */
+  .theme-dark,
+  .dark {
+    --bg-primary: #06B6D4;
+    --bg-primary-50: #ECFEFF;
+    --bg-primary-100: #CFFAFE;
+    --bg-primary-600: #0891B2;
+    --bg-primary-700: #0E7490;
+    --bg-background: #0F172A;
+    --bg-sidebar: #020617;
+    --bg-card: #1E293B;
+    --bg-border: #334155;
+    --text-primary: #F1F5F9;
+    --text-secondary: #CBD5E1;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not(.theme-light):not(.theme-dark):not(.dark) {
+      --bg-primary: #06B6D4;
+      --bg-primary-50: #ECFEFF;
+      --bg-primary-100: #CFFAFE;
+      --bg-primary-600: #0891B2;
+      --bg-primary-700: #0E7490;
+      --bg-background: #0F172A;
+      --bg-sidebar: #020617;
+      --bg-card: #1E293B;
+      --bg-border: #334155;
+      --text-primary: #F1F5F9;
+      --text-secondary: #CBD5E1;
+    }
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-card rounded-2xl border border-border shadow-lg transition-all duration-300;
+  }
+
+  .card-hover {
+    @apply card hover:-translate-y-1 hover:border-primary-100 hover:shadow-xl;
+  }
+
+  .button {
+    @apply inline-flex items-center justify-center gap-sm px-md py-sm rounded-xl font-medium transition-all duration-200;
+  }
+
+  .button-primary {
+    @apply button bg-primary-500 text-white shadow-sm hover:bg-primary-600 active:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .button-secondary {
+    @apply button bg-background text-text-primary border border-border hover:bg-card active:bg-card disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .button-ghost {
+    @apply button text-text-primary hover:bg-background active:bg-card disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .input {
+    @apply w-full px-md py-sm rounded-lg border border-border bg-card text-text-primary placeholder-text-secondary transition-all duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+  }
+
+  .input-error {
+    @apply border-red-500 focus:ring-red-500;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-sm py-xs rounded-full text-sm font-medium;
+  }
+
+  .badge-primary {
+    @apply badge bg-primary-50 text-primary-700;
+  }
+
+  .badge-success {
+    @apply badge bg-green-50 text-green-700;
+  }
+
+  .badge-warning {
+    @apply badge bg-yellow-50 text-yellow-700;
+  }
+
+  .badge-danger {
+    @apply badge bg-red-50 text-red-700;
+  }
+
+  .badge-neutral {
+    @apply badge bg-slate-100 text-slate-700;
+  }
+
+  .theme-dark .badge-primary,
+  .dark .badge-primary {
+    background-color: rgb(67 56 202 / 0.2);
+    color: rgb(196 181 253);
+  }
+
+  .theme-dark .badge-success,
+  .dark .badge-success {
+    background-color: rgb(4 120 87 / 0.2);
+    color: rgb(110 231 183);
+  }
+
+  .theme-dark .badge-warning,
+  .dark .badge-warning {
+    background-color: rgb(161 98 7 / 0.2);
+    color: rgb(253 224 71);
+  }
+
+  .theme-dark .badge-danger,
+  .dark .badge-danger {
+    background-color: rgb(153 27 27 / 0.2);
+    color: rgb(252 165 165);
+  }
+
+  .theme-dark .badge-neutral,
+  .dark .badge-neutral {
+    background-color: rgb(30 41 59);
+    color: rgb(226 232 240);
+  }
+
+  .section-title {
+    @apply text-2xl font-bold text-text-primary;
+  }
+
+  .section-subtitle {
+    @apply text-sm text-text-secondary;
+  }
+
+  .skeleton {
+    @apply animate-pulse bg-slate-200 rounded;
+  }
+
+  .theme-select {
+    @apply input appearance-none pr-12;
+  }
+
+  .no-print {
+    display: block;
+  }
+
+  .scrollbar-soft {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.65) transparent;
+  }
+
+  .scrollbar-soft::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .scrollbar-soft::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-soft::-webkit-scrollbar-thumb {
+    background-color: rgba(148, 163, 184, 0.65);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  .scrollbar-soft::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(100, 116, 139, 0.8);
+  }
+}
+
+@media print {
+  html, body, #root {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    background-image: none !important;
+    color: #000000 !important;
+  }
+
+  /* Reset layout containers that restrict height during print */
+  .h-screen, .h-full, .max-h-screen, .overflow-hidden, .overflow-y-auto, .overflow-auto {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .no-print, nav, aside, header {
+    display: none !important;
+  }
+
+  .report-page,
+  .report-sheet {
+    width: 100% !important;
+    max-width: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  * {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none !important; } .no-scrollbar { -ms-overflow-style: none !important; scrollbar-width: none !important; }

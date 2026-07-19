@@ -1,0 +1,41 @@
+Role,Module,Route,Access Level,Visible In Sidebar,Allowed Actions,Notes
+Public,Login,/login,Public,No,Sign in,Demo credentials available for testing
+Public,Register,/register,Public,No,Create account,New account enters pending approval state
+Pending Approval,Pending Approval Screen,/pending-approval,Authenticated Pending,No,View status; sign out; wait for approval,Main app remains locked until a role is assigned
+Super Admin,Dashboard,/dashboard,Full,Yes,View all KPIs; use all quick actions; export report,Full company overview
+Super Admin,Employees,/employees,Full,Yes,Create; view; edit; delete; search; filter; paginate,All employee records
+Super Admin,Departments,/departments,Full,Yes,View; add; review department capacity,Company structure
+Super Admin,Attendance,/attendance,Full,Yes,View all attendance; filter; review trends,Company-wide attendance data
+Super Admin,Leave Management,/leave,Full,Yes,Review leave trends; approve; reject; oversee queues,All leave activity
+Super Admin,Payroll,/payroll,Full,Yes,View payroll mix; run payroll; review exports,Payroll cockpit
+Super Admin,Reports,/reports,Full,Yes,Generate; export; share; print,Leadership reporting
+Super Admin,User Management,/users,Full,Yes,View users; approve; reject; assign roles; activate; deactivate; delete,Global access control
+Super Admin,Analytics,/analytics,Full,Yes,View analytics; filter; export,Operational analytics
+Super Admin,Recruitment,/recruitment,Full,Hidden,View pipeline; manage hiring board,Direct route protected for admin roles only
+Super Admin,Settings,/settings,Full,Yes,Manage profile; notifications; security; appearance; data/privacy; system controls,Super-admin system controls visible
+Super Admin,Profile,/profile,Full,Yes,View; update own profile,Personal profile access
+Admin / HR,Dashboard,/dashboard,Full,Yes,View HR KPIs; use HR quick actions; export report,Role-aware dashboard
+Admin / HR,Employees,/employees,Full,Yes,Create; view; edit; delete; search; filter; paginate,HR employee management
+Admin / HR,Departments,/departments,Full,Yes,View; manage department overview,HR org structure
+Admin / HR,Attendance,/attendance,Full,Yes,View all attendance; filter; review trends,Attendance operations
+Admin / HR,Leave Management,/leave,Full,Yes,Review leave data; approve; reject; track queues,Leave approval workflow
+Admin / HR,Payroll,/payroll,Full,Yes,View payroll mix; review finance handoff,Payroll visibility only
+Admin / HR,Reports,/reports,Full,Yes,Generate; export; print; share reports,HR reporting
+Admin / HR,User Management,/users,Limited Admin,Yes,View users; approve; reject; assign employee or admin roles; activate; deactivate; delete,No system configuration access
+Admin / HR,Analytics,/analytics,Full,Yes,View analytics; filter; export,Operational analytics
+Admin / HR,Recruitment,/recruitment,Full,Hidden,View pipeline; review hiring stages,Direct route protected for admin roles only
+Admin / HR,Settings,/settings,Partial,Yes,Manage profile; notifications; security; appearance; data/privacy,No global system controls
+Admin / HR,Profile,/profile,Full,Yes,View; update own profile,Personal profile access
+Employee,Dashboard,/dashboard,Self Service,Yes,View personal KPIs; quick access to own modules,Dashboard locked to employee snapshot
+Employee,Attendance,/attendance,Self Service,Yes,Check in; check out; view own attendance history,No department-wide filters
+Employee,Leave Management,/leave,Self Service,Yes,Apply for leave; view leave history,Employee request flow
+Employee,Payroll,/payroll,Self Service,Yes,View own payslip; download PDF; request support,Own payroll only
+Employee,Announcements,/announcements,Self Service,Yes,Read company announcements; mark as read,Employee communication feed
+Employee,Profile,/profile,Self Service,Yes,View; update own profile,Personal details only
+Employee,Settings,/settings,Self Service,Yes,Manage profile; notifications; security; appearance,No admin or system controls
+Employee,Employees,/employees,No Access,No,No access,Hidden from sidebar and routes
+Employee,Departments,/departments,No Access,No,No access,Hidden from sidebar and routes
+Employee,Reports,/reports,No Access,No,No access,Admin-only report surface
+Employee,User Management,/users,No Access,No,No access,Admin-only user administration
+Employee,Analytics,/analytics,No Access,No,No access,Admin-only analytics
+Employee,Recruitment,/recruitment,No Access,No,No access,Admin-only hiring workflow

@@ -1,0 +1,70 @@
+### Login
+
+# POST http://127.0.0.1:8000/api/v1/auth/login/
+# Content-Type: application/json
+
+# {
+#     "username": "admin",
+#     "password": "admin"
+# }
+
+#login with email and password
+# POST http://127.0.0.1:8000/api/v1/auth/login/
+# Content-Type: application/json
+
+# {
+#     "email": "admin@yopmail.com",
+#     "password": "admin"
+# }
+
+# create a new user
+
+# POST http://127.0.0.1:8000/api/v1/users/create/
+# Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg0MzYzMzY5LCJpYXQiOjE3ODQzNjE1NzAsImp0aSI6IjdlYjk2YmNlNTE2ODQ0ZDI5N2ZmNWYxY2M5YjUxYmQ5IiwidXNlcl9pZCI6ImE1NDhiOGNjLWI2NzItNGIzYy04OTQ0LTBiMDllMTdkMDI2OSJ9.Y94reNhxaDCLFuv8ATvBark95yLTsFWhr240998d8FY
+# Content-Type: application/json
+
+# {
+#     "email": "john1@yopmail.com",
+#     "first_name": "John",
+#     "last_name": "Doe",
+#     "phone_number": "9876543210",
+#     "password": "admin"
+# }
+# Get All Users
+
+# GET http://127.0.0.1:8000/api/v1/users/a548b8cc-b672-4b3c-8944-0b09e17d0269/
+# Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg0MzYzMzY5LCJpYXQiOjE3ODQzNjE1NzAsImp0aSI6IjdlYjk2YmNlNTE2ODQ0ZDI5N2ZmNWYxY2M5YjUxYmQ5IiwidXNlcl9pZCI6ImE1NDhiOGNjLWI2NzItNGIzYy04OTQ0LTBiMDllMTdkMDI2OSJ9.Y94reNhxaDCLFuv8ATvBark95yLTsFWhr240998d8FY
+# ### Get Employees
+
+# GET http://127.0.0.1:8000/api/v1/employees/
+# Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzgzMjM5NzUyLCJpYXQiOjE3ODMyMzc5NTIsImp0aSI6ImE3NDBkZWEyZGE2ZTRiZGQ5ODM3ZTAzNWY3ZTA4YzA1IiwidXNlcl9pZCI6ImE1NDhiOGNjLWI2NzItNGIzYy04OTQ0LTBiMDllMTdkMDI2OSJ9.RUDhkuZeatGjoyTG6B9gW5VKdpwMwugV7KIsdT2nOrc
+
+# ###
+
+# ### Create Employee
+# POST http://127.0.0.1:8000/api/v1/employees/
+# Content-Type: application/json
+# Authorization: Bearer YOUR_ACCESS_TOKEN
+
+# {
+#     "first_name": "John",
+#     "last_name": "Doe"
+# }
+
+# ###
+
+# ### Update Employee
+# PUT http://127.0.0.1:8000/api/v1/employees/1/
+# Content-Type: application/json
+# Authorization: Bearer YOUR_ACCESS_TOKEN
+
+# {
+#     "first_name": "John",
+#     "last_name": "Smith"
+# }
+
+# ###
+
+# ### Delete Employee
+# DELETE http://127.0.0.1:8000/api/v1/employees/1/
+# Authorization: Bearer YOUR_ACCESS_TOKEN
