@@ -20,8 +20,8 @@ class UserService:
         # Generate employee ID automatically
         validated_data["employee_id"] = generate_employee_id()
 
-        # Ensure new users are active by default for end-to-end testing/usage
-        validated_data["is_active"] = True
+        # Ensure new users are inactive by default pending admin approval
+        validated_data["is_active"] = False
 
         # Create user through repository
         return UserRepository.create_user(**validated_data)

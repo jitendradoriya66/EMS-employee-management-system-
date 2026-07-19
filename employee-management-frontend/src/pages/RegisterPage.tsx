@@ -48,8 +48,8 @@ export const RegisterPage: React.FC = () => {
     setLoading(true)
     try {
       await register(firstName, lastName, email, phone, password)
-      setSuccess('Registration successful! Redirecting to login...')
-      setTimeout(() => navigate('/login'), 2000)
+      setSuccess('Registration successful! Your account is pending admin approval to access Workforce Hub. Redirecting to login...')
+      setTimeout(() => navigate('/login'), 4000)
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please try again.')
     } finally {
