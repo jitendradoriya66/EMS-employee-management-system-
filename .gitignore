@@ -1,0 +1,20 @@
+# Backend
+employee-management-backend/venv/
+employee-management-backend/__pycache__/
+employee-management-backend/db.sqlite3
+employee-management-backend/.env
+employee-management-backend/staticfiles/
+employee-management-backend/media/
+
+# Frontend
+employee-management-frontend/node_modules/
+employee-management-frontend/dist/
+employee-management-frontend/.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
