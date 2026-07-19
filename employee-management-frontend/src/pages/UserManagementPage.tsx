@@ -46,8 +46,7 @@ const roleOptions = [
 ]
 
 const approvalOptions = [
-  { value: 'all', label: 'All statuses' },
-  { value: 'pending', label: 'Pending Approval' },
+  { value: 'all', label: 'All reviewed' },
   { value: 'approved', label: 'Approved' },
   { value: 'rejected', label: 'Rejected' },
 ]
@@ -121,14 +120,9 @@ export const UserManagementPage: React.FC = () => {
   const pageSize = 8
 
   const orderedUsers = useMemo(() => {
-    return [...users].sort((left, right) => {
-      if (left.approvalStatus === 'pending' && right.approvalStatus !== 'pending') {
-        return -1
-      }
-      if (right.approvalStatus === 'pending' && left.approvalStatus !== 'pending') {
-        return 1
-      }
-
+    // Only show users that are NOT pending
+    const reviewedUsers = users.filter(u => u.approvalStatus !== 'pending');
+    return reviewedUsers.sort((left, right) => {
       return new Date(right.registrationDate || 0).getTime() - new Date(left.registrationDate || 0).getTime()
     })
   }, [users])
