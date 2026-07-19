@@ -31,6 +31,8 @@ SECRET_KEY = os.environ.get(
 
 
 INSTALLED_APPS = [
+    "daphne",
+    "channels",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -175,3 +177,9 @@ CORS_ALLOWED_ORIGINS = os.environ.get(
     "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173"
 ).split(",")
 CORS_ALLOW_CREDENTIALS = True
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
+}
