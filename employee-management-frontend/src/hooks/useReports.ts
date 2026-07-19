@@ -28,16 +28,6 @@ export const useReports = () => {
         status: item.status || 'Ready',
       })) : [])
     } catch (err) {
-      console.error('Failed to fetch reports', err)
-      setReports([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchReports()
-  }, [])
 
   return { reports, loading, fetchReports }
 }

@@ -11,7 +11,6 @@ export function useEmployees() {
       setEmployees(res.employees);
       setLoading(false);
     }).catch(err => {
-      console.error(err);
       setLoading(false);
     });
   }, []);

@@ -22,16 +22,6 @@ export const useRecruitment = () => {
       const results = data.results || data
       setJobs(Array.isArray(results) ? results : [])
     } catch (err) {
-      console.error('Failed to fetch jobs', err)
-      setJobs([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchJobs()
-  }, [])
 
   return { jobs, loading, fetchJobs }
 }

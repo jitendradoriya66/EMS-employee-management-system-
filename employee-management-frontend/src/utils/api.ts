@@ -78,7 +78,6 @@ export const fetchEmployees = async (
 
     return { employees: paginated, total }
   } catch (error) {
-    console.error('Error fetching employees:', error);
     return { employees: [], total: 0 }
   }
 }

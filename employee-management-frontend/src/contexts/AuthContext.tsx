@@ -76,7 +76,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('User not found in list');
       }
     } catch (error) {
-      console.error('Error fetching current user:', error);
       logout();
       return null;
     }
@@ -123,7 +122,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return tempUser;
     } catch (error: any) {
-      console.error('Login error:', error);
       throw new Error(error.response?.data?.detail || 'Invalid email or password');
     }
   }
@@ -143,7 +141,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Auto login after registration removed, returning null since we redirect to login
       return null as any;
     } catch (error: any) {
-      console.error('Registration error:', error);
       throw new Error(error.response?.data?.email?.[0] || error.response?.data?.phone_number?.[0] || 'Registration failed');
     }
   }
@@ -180,79 +177,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updatedUser: UserAccount = { ...currentUser, role, approvalStatus: 'approved', accountStatus: 'active' }
       persistUser(updatedUser)
     } catch (err) {
-      console.error('Failed to approve user', err)
-      // Optimistic update for demo
-      const currentUser = users.find(account => account.id === userId)
-      if (currentUser) {
-        persistUser({ ...currentUser, role, approvalStatus: 'approved', accountStatus: 'active' })
-      }
-    }
-  }
-
-  const rejectUser = async (userId: string) => {
-    try {
-      await apiClient.patch(`/api/v1/users/${userId}/`, { is_active: false, is_staff: false, is_superuser: false })
-      
-      const currentUser = users.find(account => account.id === userId)
-      if (!currentUser) return
-      const updatedUser: UserAccount = { ...currentUser, role: null, approvalStatus: 'rejected', accountStatus: 'inactive' }
-      persistUser(updatedUser)
-    } catch (err) {
-      console.error('Failed to reject user', err)
-      const currentUser = users.find(account => account.id === userId)
-      if (currentUser) {
-        persistUser({ ...currentUser, role: null, approvalStatus: 'rejected', accountStatus: 'inactive' })
-      }
-    }
-  }
-
-  const updateUserRole = async (userId: string, role: UserRole) => {
-    try {
-      const payload = {
-        is_staff: role === 'super_admin' || role === 'admin_hr',
-        is_superuser: role === 'super_admin',
-      }
-      await apiClient.patch(`/api/v1/users/${userId}/`, payload)
-      
-      const currentUser = users.find(account => account.id === userId)
-      if (!currentUser) return
-      const updatedUser: UserAccount = { ...currentUser, role, approvalStatus: 'approved', accountStatus: 'active' }
-      persistUser(updatedUser)
-    } catch (err) {
-      console.error('Failed to update role', err)
-      const currentUser = users.find(account => account.id === userId)
-      if (currentUser) {
-        persistUser({ ...currentUser, role, approvalStatus: 'approved', accountStatus: 'active' })
-      }
-    }
-  }
-
-  const toggleUserStatus = async (userId: string) => {
-    const currentUser = users.find(account => account.id === userId)
-    if (!currentUser) return
-    
-    try {
-      const newStatus = currentUser.accountStatus === 'active' ? 'inactive' : 'active'
-      await apiClient.patch(`/api/v1/users/${userId}/`, { is_active: newStatus === 'active' })
-      
-      const updatedUser: UserAccount = { ...currentUser, accountStatus: newStatus }
-      persistUser(updatedUser)
-    } catch (err) {
-      console.error('Failed to toggle status', err)
-      const newStatus = currentUser.accountStatus === 'active' ? 'inactive' : 'active'
-      persistUser({ ...currentUser, accountStatus: newStatus })
-    }
-  }
-
-  const deleteUser = async (userId: string) => {
-    try {
-      await apiClient.delete(`/api/v1/users/${userId}/`)
-      setUsers(previousUsers => previousUsers.filter(account => account.id !== userId))
-      if (user?.id === userId) logout()
-    } catch (err) {
-      console.error('Failed to delete user', err)
-      setUsers(previousUsers => previousUsers.filter(account => account.id !== userId))
-      if (user?.id === userId) logout()
     }
   }
 
@@ -271,39 +195,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updatedUser: UserAccount = { ...currentUser, name: data.name, email: data.email, department: data.department }
       persistUser(updatedUser)
     } catch (err) {
-      console.error('Failed to update user details', err)
-      const currentUser = users.find(account => account.id === userId)
-      if (currentUser) {
-        persistUser({ ...currentUser, name: data.name, email: data.email, department: data.department })
-      }
-    }
-  }
-
-  return (
-    <AuthContext.Provider value={{
-      isAuthenticated,
-      isLoading,
-      user,
-      users,
-      login,
-      register,
-      logout,
-      approveUser,
-      rejectUser,
-      updateUserRole,
-      toggleUserStatus,
-      deleteUser,
-      updateUserDetails,
-    }}>
-      {children}
-    </AuthContext.Provider>
-  )
-}
-
-export const useAuth = () => {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider')
   }
   return context
 }
