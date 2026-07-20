@@ -171,3 +171,13 @@ export const approvePayslip = async (id: string) => {
   const response = await apiClient.post(`/api/v1/payroll/payslips/${id}/approve/`);
   return response.data;
 }
+
+export const requestPasswordReset = async (email: string) => {
+  const response = await apiClient.post('/api/v1/auth/password-reset/', { email });
+  return response.data;
+}
+
+export const confirmPasswordReset = async (uidb64: string, token: string, new_password: string) => {
+  const response = await apiClient.post('/api/v1/auth/password-reset/confirm/', { uidb64, token, new_password });
+  return response.data;
+}

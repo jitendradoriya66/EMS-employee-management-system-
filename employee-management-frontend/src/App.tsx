@@ -10,6 +10,7 @@ import { ProtectedRoute } from '@/components/common/ProtectedRoute'
 import { LoginPage } from '@/pages/LoginPage'
 import { RegisterPage } from '@/pages/RegisterPage'
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage'
+import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { EmployeesPage } from '@/pages/EmployeesPage'
 import { EmployeeDetailsPage } from '@/pages/EmployeeDetailsPage'
@@ -222,6 +223,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password/:uid/:token" element={<ResetPasswordPage />} />
             <Route path="/pending-approval" element={<ProtectedRoute allowPendingApproval><PendingApprovalPage /></ProtectedRoute>} />
             <Route
               path="/*"

@@ -1,14 +1,18 @@
 import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Mail, ArrowLeft, CheckCircle } from 'lucide-react'
+import { Link, useParams, useNavigate } from 'react-router-dom'
+import { KeyRound, ArrowLeft, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
 import { Alert } from '@/components/common/Alert'
 import { motion } from 'framer-motion'
-import { requestPasswordReset } from '@/utils/api'
+import { confirmPasswordReset } from '@/utils/api'
 
-export const ForgotPasswordPage: React.FC = () => {
-  const [email, setEmail] = useState('')
+export const ResetPasswordPage: React.FC = () => {
+  const { uid, token } = useParams<{ uid: string; token: string }>()
+  const navigate = useNavigate()
+  
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
@@ -17,22 +21,33 @@ export const ForgotPasswordPage: React.FC = () => {
     e.preventDefault()
     setError('')
 
-    if (!email) {
-      setError('Please enter your email address')
+    if (!password || !confirmPassword) {
+      setError('Please fill in all fields')
       return
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError('Invalid email format')
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long')
+      return
+    }
+
+    if (!uid || !token) {
+      setError('Invalid reset link')
       return
     }
 
     setLoading(true)
     try {
-      await requestPasswordReset(email)
+      await confirmPasswordReset(uid, token, password)
       setSubmitted(true)
+      setTimeout(() => navigate('/login'), 3000)
     } catch (err: any) {
-      setError(err.response?.data?.error || err.response?.data?.email?.[0] || 'Failed to send reset email. Please try again.')
+      setError(err.response?.data?.error || err.response?.data?.new_password?.[0] || 'Failed to reset password. The link might be expired or invalid.')
     } finally {
       setLoading(false)
     }
@@ -46,7 +61,6 @@ export const ForgotPasswordPage: React.FC = () => {
         transition={{ duration: 0.4 }}
         className="w-full max-w-md"
       >
-        {/* Logo Section */}
         <div className="text-center mb-xl">
           <motion.div
             initial={{ scale: 0 }}
@@ -57,16 +71,16 @@ export const ForgotPasswordPage: React.FC = () => {
             {submitted ? (
               <CheckCircle className="h-8 w-8" />
             ) : (
-              <Mail className="h-8 w-8" />
+              <KeyRound className="h-8 w-8" />
             )}
           </motion.div>
           <h1 className="text-3xl font-bold text-text-primary">
-            {submitted ? 'Email Sent' : 'Reset Password'}
+            {submitted ? 'Password Reset' : 'Create New Password'}
           </h1>
           <p className="text-text-secondary mt-sm">
             {submitted
-              ? 'Check your email for password reset instructions'
-              : 'Enter your email to receive reset instructions'}
+              ? 'Your password has been successfully reset. Redirecting...'
+              : 'Enter your new password below'}
           </p>
         </div>
 
@@ -80,17 +94,23 @@ export const ForgotPasswordPage: React.FC = () => {
               )}
 
               <form onSubmit={handleSubmit} className="space-y-md">
-                <div className="relative">
-                  <Mail className="absolute left-md top-1/2 transform -translate-y-1/2 h-5 w-5 text-text-secondary pointer-events-none" />
-                  <Input
-                    type="email"
-                    placeholder="Email address"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-3xl"
-                    disabled={loading}
-                  />
-                </div>
+                <Input
+                  type="password"
+                  label="New Password"
+                  placeholder="Enter new password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                />
+                
+                <Input
+                  type="password"
+                  label="Confirm Password"
+                  placeholder="Confirm new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={loading}
+                />
 
                 <Button
                   type="submit"
@@ -98,14 +118,13 @@ export const ForgotPasswordPage: React.FC = () => {
                   className="w-full"
                   isLoading={loading}
                 >
-                  Send Reset Link
+                  Reset Password
                 </Button>
               </form>
             </>
           ) : (
             <Alert variant="success" title="Success">
-              We've sent password reset instructions to <strong>{email}</strong>. Check your inbox and follow
-              the link to reset your password.
+              Your password has been updated. You will be redirected to the login page momentarily.
             </Alert>
           )}
 
