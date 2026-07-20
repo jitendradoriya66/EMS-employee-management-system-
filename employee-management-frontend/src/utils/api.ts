@@ -103,6 +103,7 @@ export const createEmployee = async (data: any): Promise<Employee> => {
     salary: data.salary || 0,
     start_date: data.startDate || new Date().toISOString().split('T')[0],
     status: data.status || 'active',
+    role: data.role || 'employee',
   };
     const response = await apiClient.post('/api/v1/employees/create/', payload);
     return mapBackendEmployeeToFrontend(response.data);
@@ -159,4 +160,14 @@ export const fetchPayslips = async () => {
 export const fetchProjects = async () => {
   const response = await apiClient.get('/api/v1/projects/');
   return response.data.results || response.data;
+}
+
+export const generatePayroll = async (month: number, year: number) => {
+  const response = await apiClient.post('/api/v1/payroll/payslips/generate/', { month, year });
+  return response.data;
+}
+
+export const approvePayslip = async (id: string) => {
+  const response = await apiClient.post(`/api/v1/payroll/payslips/${id}/approve/`);
+  return response.data;
 }

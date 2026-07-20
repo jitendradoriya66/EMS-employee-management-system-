@@ -85,7 +85,6 @@ class CurrentUserSerializer(serializers.ModelSerializer):
         read_only_fields = (
             "id",
             "employee_id",
-            "email",
             "is_active",
             "is_staff",
             "is_superuser",

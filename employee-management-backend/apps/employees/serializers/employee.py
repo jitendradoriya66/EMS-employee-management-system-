@@ -61,6 +61,7 @@ class EmployeeCreateSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(write_only=True)
     phone_number = serializers.CharField(write_only=True, required=False, allow_blank=True)
     department_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    role = serializers.CharField(write_only=True, required=False, default='employee')
 
     class Meta:
         model = Employee
@@ -83,19 +84,26 @@ class EmployeeCreateSerializer(serializers.ModelSerializer):
             email = validated_data.pop('email')
             phone_number = validated_data.pop('phone_number', '')
             department_name = validated_data.pop('department_name', None)
+            
+            # Resolve role
+            role = validated_data.pop('role', 'employee')
+            is_staff = role in ['admin_hr', 'super_admin', 'admin', 'hr']
+            is_superuser = role == 'super_admin'
 
             # Create User
             employee_id = f"EMP{str(uuid.uuid4())[:8].upper()}"
-            # Generate a secure random password — user must reset via email
-            random_password = ''.join(secrets.choice(string.ascii_letters + string.digits + string.punctuation) for _ in range(16))
+            # Generate default credentials
+            default_password = 'Welcome@123'
             user = User.objects.create_user(
                 email=email,
                 first_name=first_name,
                 last_name=last_name,
                 phone_number=phone_number,
-                password=random_password,
+                password=default_password,
                 employee_id=employee_id,
-                is_active=False,  # Require admin activation
+                is_active=True,
+                is_staff=is_staff,
+                is_superuser=is_superuser,
             )
 
             # Resolve department

@@ -10,6 +10,7 @@ interface AuthContextType {
   users: UserAccount[]
   fetchUsers: () => Promise<UserAccount[]>
   login: (email: string, password: string, rememberMe?: boolean) => Promise<UserAccount>
+  googleLogin: (credential: string) => Promise<UserAccount>
   register: (firstName: string, lastName: string, email: string, phone: string, password: string) => Promise<UserAccount>
   logout: () => void
   approveUser: (userId: string, role: UserRole) => void
@@ -133,6 +134,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error: any) {
       console.error('Login error:', error);
       throw new Error(error.response?.data?.detail || 'Invalid email or password');
+    }
+  }
+
+  const googleLogin = async (credential: string) => {
+    try {
+      const response = await apiClient.post('/api/v1/auth/google/', { credential });
+      const { access, refresh } = response.data;
+      
+      const storage = localStorage;
+      storage.setItem('access_token', access);
+      storage.setItem('refresh_token', refresh);
+      
+      const loggedInUser = await fetchCurrentUser(access, storage);
+      if (loggedInUser) {
+        return loggedInUser;
+      }
+      throw new Error('Failed to fetch user after Google login');
+    } catch (error: any) {
+      console.error('Google Login error:', error);
+      throw new Error(error.response?.data?.error || 'Google Login failed');
     }
   }
 
@@ -295,6 +316,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       users,
       fetchUsers,
       login,
+      googleLogin,
       register,
       logout,
       approveUser,

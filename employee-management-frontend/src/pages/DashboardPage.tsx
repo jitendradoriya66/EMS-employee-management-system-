@@ -8,6 +8,7 @@ import { formatCurrency, formatDate, getDepartmentColor } from '@/utils/helpers'
 import { useEmployees } from '@/hooks/useEmployees'
 import { useAnnouncements } from '@/hooks/useAnnouncements'
 import { useTasks } from '@/hooks/useTasks'
+import { useHolidays } from '@/hooks/useHolidays'
 
 type RangeKey = '7d' | '30d' | '90d' | 'all'
 
@@ -253,6 +254,7 @@ export const DashboardPage: React.FC = () => {
   const { employees: realEmployees, loading: employeesLoading } = useEmployees()
   const { announcements, loading: announcementsLoading } = useAnnouncements()
   const { tasks, loading: tasksLoading } = useTasks()
+  const { holidays, loading: holidaysLoading } = useHolidays()
   
   // ensure we have a fallback for employees to prevent crash before data loads
   const mockEmployees = realEmployees || []
@@ -445,7 +447,7 @@ export const DashboardPage: React.FC = () => {
       transition={{ duration: 0.35 }}
       className="space-y-lg"
     >
-      {(employeesLoading || announcementsLoading || tasksLoading) && <div className="p-xl text-center text-text-secondary">Loading dashboard data...</div>}
+      {(employeesLoading || announcementsLoading || tasksLoading || holidaysLoading) && <div className="p-xl text-center text-text-secondary">Loading dashboard data...</div>}
       <div className="flex flex-col gap-md rounded-3xl border border-border bg-card p-lg shadow-lg shadow-slate-900/5 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-2xl space-y-md">
           <div className="inline-flex items-center gap-sm rounded-full border border-white/10 bg-slate-950 px-md py-xs text-xs font-semibold text-cyan-300 shadow-sm dark:border-white/10 dark:bg-slate-950">
@@ -687,6 +689,26 @@ export const DashboardPage: React.FC = () => {
                 </div>
               ))}
               {upcomingEvents.length === 0 && <p className="text-sm text-text-secondary">No upcoming tasks or events.</p>}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-border bg-card p-lg shadow-sm">
+            <div className="flex items-center justify-between gap-md">
+              <div>
+                <h3 className="text-lg font-bold text-text-primary">Indian Holidays</h3>
+                <p className="text-sm text-text-secondary">Upcoming national and regional holidays.</p>
+              </div>
+              <CalendarDays className="h-5 w-5 text-primary-600" />
+            </div>
+            <div className="mt-md space-y-sm">
+              {holidays.map(holiday => (
+                <div key={`${holiday.date}-${holiday.name}`} className="rounded-2xl border border-border bg-background p-md">
+                  <p className="font-semibold text-text-primary">{holiday.name}</p>
+                  <p className="mt-xs text-sm text-text-secondary">{formatDate(holiday.date)}</p>
+                  <p className="mt-xs text-xs font-semibold text-primary-600">{holiday.type}</p>
+                </div>
+              ))}
+              {holidays.length === 0 && <p className="text-sm text-text-secondary">No upcoming holidays.</p>}
             </div>
           </div>
         </div>

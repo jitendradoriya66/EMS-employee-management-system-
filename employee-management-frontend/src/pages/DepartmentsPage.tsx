@@ -8,7 +8,7 @@ import { getDepartmentColor } from '@/utils/helpers'
 import { Input } from '@/components/common/Input'
 import { Alert } from '@/components/common/Alert'
 import { AnimatePresence } from 'framer-motion'
-// mockEmployees removed
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
 
 export const DepartmentsPage: React.FC = () => {
   const { departments, loading, addDepartment } = useDepartments()
@@ -218,8 +218,15 @@ export const DepartmentsPage: React.FC = () => {
                 </button>
               </div>
 
-              <div className="overflow-auto w-full p-xl bg-slate-50/50 dark:bg-slate-900/20">
-                <div className="w-max min-w-full flex flex-col items-center">
+              <div className="overflow-hidden w-full h-[600px] bg-slate-50/50 dark:bg-slate-900/20 relative cursor-move">
+                <TransformWrapper
+                  initialScale={1}
+                  minScale={0.5}
+                  maxScale={2}
+                  centerOnInit
+                >
+                  <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }}>
+                    <div className="w-max min-w-full flex flex-col items-center p-xl">
                   
                   {/* CEO Node */}
                   <div className="flex flex-col items-center">
@@ -276,7 +283,9 @@ export const DepartmentsPage: React.FC = () => {
                       ))}
                     </div>
                   </div>
-                </div>
+                  </div>
+                </TransformComponent>
+                </TransformWrapper>
               </div>
             </motion.div>
           </motion.div>

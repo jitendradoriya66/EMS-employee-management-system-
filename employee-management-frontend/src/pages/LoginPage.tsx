@@ -6,10 +6,11 @@ import { Input } from '@/components/common/Input'
 import { Alert } from '@/components/common/Alert'
 import { useAuth } from '@/contexts/AuthContext'
 import { motion } from 'framer-motion'
+import { GoogleLogin } from '@react-oauth/google';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { login, googleLogin } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
@@ -118,7 +119,33 @@ export const LoginPage: React.FC = () => {
             <div className="flex-1 h-px bg-border" />
           </div>
 
-          <div className="space-y-sm text-center text-sm">
+          <div className="flex justify-center">
+            <GoogleLogin
+              onSuccess={async (credentialResponse) => {
+                try {
+                  setLoading(true);
+                  if (credentialResponse.credential) {
+                    await googleLogin(credentialResponse.credential);
+                    navigate('/dashboard');
+                  }
+                } catch (err) {
+                  setError('Google Login failed. Please try again.');
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              onError={() => {
+                setError('Google Login Failed');
+              }}
+              useOneTap
+              theme="outline"
+              size="large"
+              shape="rectangular"
+              width="100%"
+            />
+          </div>
+
+          <div className="space-y-sm text-center text-sm mt-md">
             <p className="text-text-secondary">
               Don't have an account?{' '}
               <Link to="/register" className="text-primary-500 font-semibold hover:underline">

@@ -12,7 +12,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         user = self.request.user
         # For simplicity, if not admin, only show own attendance
         # In a real app we would check if they have specific permissions
-        if getattr(user, 'role', 'employee') != 'employee':
+        if user.is_staff or user.is_superuser:
             return Attendance.objects.all()
         # Find employee profile for user
         if hasattr(user, 'employee_profile'):
@@ -22,7 +22,15 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user
         if hasattr(user, 'employee_profile'):
-            instance = serializer.save(employee=user.employee_profile)
+            employee = user.employee_profile
+            date_val = serializer.validated_data.get('date')
+            
+            # Prevent duplicate check-in
+            if Attendance.objects.filter(employee=employee, date=date_val).exists():
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError("Attendance record already exists for this date.")
+                
+            instance = serializer.save(employee=employee)
             self.broadcast_attendance_update(instance, "check-in")
         else:
             from rest_framework.exceptions import ValidationError

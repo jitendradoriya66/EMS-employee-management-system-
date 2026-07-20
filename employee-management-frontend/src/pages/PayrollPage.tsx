@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowRight, DollarSign, Download, FileText, Layers3, TrendingUp, Users } from 'lucide-react'
+import { ArrowRight, DollarSign, Download, FileText, TrendingUp, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/common/Button'
 import { usePayslips } from '@/hooks/usePayslips'
@@ -8,7 +8,11 @@ import { formatCurrency } from '@/utils/helpers'
 import { useAuth } from '@/contexts/AuthContext'
 
 export const PayrollPage: React.FC = () => {
-  const { payslips, loading } = usePayslips();
+  const { payslips, loading, generate, approve } = usePayslips();
+  const [selectedMonth, setSelectedMonth] = React.useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = React.useState(new Date().getFullYear());
+  const [isGenerating, setIsGenerating] = React.useState(false);
+
   const { user } = useAuth()
   const isEmployee = (user?.role ?? 'employee') === 'employee'
 
@@ -111,10 +115,26 @@ export const PayrollPage: React.FC = () => {
           </div>
 
           <div className="rounded-3xl border border-border bg-card p-lg shadow-sm">
-            <h2 className="text-lg font-bold text-text-primary">Recent payroll notes</h2>
-            <div className="mt-md space-y-sm text-sm text-text-secondary">
-              <p>• Net pay reflects salary, deductions, and benefits from the current pay cycle.</p>
-              <p>• Access is limited to your own payroll information.</p>
+            <h2 className="text-lg font-bold text-text-primary">Payslip History</h2>
+            <div className="mt-md space-y-sm text-sm text-text-secondary overflow-y-auto max-h-[300px]">
+              {myPayslips.length === 0 ? (
+                <p>No payslips found.</p>
+              ) : (
+                myPayslips.map(slip => (
+                  <div key={slip.id} className="flex justify-between items-center p-sm border-b border-border last:border-0">
+                    <div>
+                      <p className="font-semibold text-text-primary">{slip.period_start} to {slip.period_end}</p>
+                      <p className="text-xs">{slip.status}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-text-primary">{formatCurrency(parseFloat(slip.net_pay || '0'))}</p>
+                      <Button variant="secondary" className="py-1 px-2 text-xs mt-1" onClick={() => window.print()}>
+                        View
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -158,53 +178,78 @@ export const PayrollPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-lg xl:grid-cols-[0.95fr_1.05fr]">
+      <div className="grid grid-cols-1 gap-lg xl:grid-cols-[1fr]">
         <div className="rounded-3xl border border-border bg-card p-lg shadow-sm">
-          <div className="flex items-center justify-between gap-md">
+          <div className="flex items-center justify-between gap-md mb-md">
             <div>
-              <h2 className="text-lg font-bold text-text-primary">Department payroll mix</h2>
-              <p className="text-sm text-text-secondary">Use this view to review cost concentration by team.</p>
+              <h2 className="text-lg font-bold text-text-primary">Manage Payroll Runs</h2>
+              <p className="text-sm text-text-secondary">Generate and approve monthly payrolls.</p>
             </div>
-            <Layers3 className="h-5 w-5 text-primary-600" />
-          </div>
-
-          <div className="mt-md space-y-sm">
-            {payroll.byDepartment.map(item => (
-              <div key={item.department} className="rounded-2xl border border-border bg-background p-md">
-                <div className="flex items-center justify-between gap-md">
-                  <span className="text-sm font-semibold text-text-primary">{item.department}</span>
-                  <span className="text-sm font-bold text-text-secondary">{formatCurrency(item.value)}</span>
-                </div>
-                <div className="mt-md h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                  <div className="h-full rounded-full bg-gradient-to-r from-primary-500 to-cyan-400" style={{ width: `${Math.min(100, (item.value / payroll.totalAnnual) * 100)}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-border bg-card p-lg shadow-sm">
-          <div className="flex items-center justify-between gap-md">
-            <div>
-              <h2 className="text-lg font-bold text-text-primary">Payroll run checklist</h2>
-              <p className="text-sm text-text-secondary">Core steps that usually appear in a real enterprise payroll flow.</p>
+            <div className="flex gap-sm">
+              <select className="input-field max-w-[120px]" value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))}>
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <option key={i + 1} value={i + 1}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>
+                ))}
+              </select>
+              <input type="number" className="input-field max-w-[100px]" value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} />
+              <Button 
+                variant="primary" 
+                onClick={async () => {
+                  setIsGenerating(true);
+                  try {
+                    await generate(selectedMonth, selectedYear);
+                  } finally {
+                    setIsGenerating(false);
+                  }
+                }}
+                disabled={isGenerating}
+              >
+                {isGenerating ? 'Generating...' : 'Generate Payroll'}
+              </Button>
             </div>
-            <FileText className="h-5 w-5 text-primary-600" />
           </div>
 
-          <div className="mt-md space-y-sm">
-            {[
-              'Validate time and attendance inputs',
-              'Review leave deductions and approvals',
-              'Apply allowances, bonuses, and adjustments',
-              'Generate finance-ready export',
-              'Notify managers of final approval status',
-            ].map(step => (
-              <div key={step} className="flex items-start gap-sm rounded-2xl border border-border bg-background p-md">
-                <span className="mt-1 h-2.5 w-2.5 rounded-full bg-primary-500" />
-                <p className="text-sm text-text-primary">{step}</p>
+          <div className="mt-md">
+            {payslips.length === 0 ? (
+              <p className="text-sm text-text-secondary">No payslips found.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-text-secondary">
+                  <thead className="bg-background text-xs uppercase text-text-primary">
+                    <tr>
+                      <th className="px-4 py-3">Employee</th>
+                      <th className="px-4 py-3">Period</th>
+                      <th className="px-4 py-3">Gross Pay</th>
+                      <th className="px-4 py-3">Net Pay</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payslips.map(slip => (
+                      <tr key={slip.id} className="border-b border-border">
+                        <td className="px-4 py-3 font-medium text-text-primary">{slip.employeeName}</td>
+                        <td className="px-4 py-3">{slip.period_start} to {slip.period_end}</td>
+                        <td className="px-4 py-3">{formatCurrency(parseFloat(slip.gross_pay || '0'))}</td>
+                        <td className="px-4 py-3">{formatCurrency(parseFloat(slip.net_pay || '0'))}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${slip.status === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'}`}>
+                            {slip.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {slip.status === 'draft' && (
+                            <Button variant="secondary" className="py-1 px-3 text-xs" onClick={() => approve(slip.id)}>
+                              Approve
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>

@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
-import { fetchPayslips } from '@/utils/api';
+import { useState, useEffect, useCallback } from 'react';
+import { fetchPayslips, generatePayroll, approvePayslip } from '@/utils/api';
 
 export function usePayslips() {
   const [payslips, setPayslips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadPayslips = useCallback(() => {
+    setLoading(true);
     fetchPayslips().then(res => {
       setPayslips(res);
       setLoading(false);
@@ -15,5 +16,19 @@ export function usePayslips() {
     });
   }, []);
 
-  return { payslips, loading };
+  useEffect(() => {
+    loadPayslips();
+  }, [loadPayslips]);
+
+  const generate = async (month: number, year: number) => {
+    await generatePayroll(month, year);
+    loadPayslips();
+  };
+
+  const approve = async (id: string) => {
+    await approvePayslip(id);
+    loadPayslips();
+  };
+
+  return { payslips, loading, generate, approve, refresh: loadPayslips };
 }
