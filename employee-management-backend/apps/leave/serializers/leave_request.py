@@ -14,3 +14,17 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
         if obj.employee and obj.employee.user:
             return f"{obj.employee.user.first_name} {obj.employee.user.last_name}"
         return None
+
+    def validate(self, data):
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+        
+        if start_date and end_date:
+            if end_date < start_date:
+                raise serializers.ValidationError({"end_date": "End date cannot be before start date."})
+            
+            from django.utils import timezone
+            if start_date < timezone.now().date():
+                raise serializers.ValidationError({"start_date": "Start date cannot be in the past."})
+                
+        return data

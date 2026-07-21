@@ -25,6 +25,28 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         try:
             employee = self.request.user.employee_profile
+            
+            start_date = serializer.validated_data.get('start_date')
+            end_date = serializer.validated_data.get('end_date')
+            
+            # Check overlap
+            overlapping = LeaveRequest.objects.filter(
+                employee=employee,
+                status__in=['pending', 'approved'],
+                start_date__lte=end_date,
+                end_date__gte=start_date
+            )
+            if overlapping.exists():
+                raise ValidationError("You already have a pending or approved leave request during this period.")
+            
+            # Check balance
+            approved_leaves = LeaveRequest.objects.filter(employee=employee, status='approved')
+            total_days_used = sum((req.end_date - req.start_date).days + 1 for req in approved_leaves)
+            requested_days = (end_date - start_date).days + 1
+            
+            if total_days_used + requested_days > 20:
+                raise ValidationError(f"Insufficient leave balance. You have {20 - total_days_used} days remaining.")
+
             serializer.save(employee=employee)
         except Employee.DoesNotExist:
             raise ValidationError("User does not have an associated employee profile.")

@@ -20,6 +20,7 @@ export const LeavePage: React.FC = () => {
     reason: '',
   })
   const [submissionState, setSubmissionState] = useState<'idle' | 'submitting' | 'submitted' | 'error'>('idle')
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const myLeaveRequests = useMemo(() => {
     if (!isEmployee || !user?.name) return leaveRequests;
@@ -43,6 +44,27 @@ export const LeavePage: React.FC = () => {
 
   const handleLeaveSubmit = async () => {
     try {
+      setErrorMessage(null)
+      
+      if (!leaveForm.reason.trim()) {
+        setErrorMessage("Please provide a reason for your leave.")
+        return
+      }
+
+      const start = new Date(leaveForm.startDate)
+      const end = new Date(leaveForm.endDate)
+      
+      if (end < start) {
+        setErrorMessage("End date cannot be before start date.")
+        return
+      }
+      
+      const requestedDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+      if (requestedDays > leaveBalance) {
+        setErrorMessage(`Insufficient leave balance. You are requesting ${requestedDays} days but only have ${leaveBalance} days left.`)
+        return
+      }
+
       setSubmissionState('submitting')
       await submitLeaveRequest({
         start_date: leaveForm.startDate,
@@ -50,9 +72,21 @@ export const LeavePage: React.FC = () => {
         reason: leaveForm.reason
       })
       setSubmissionState('submitted')
-    } catch (error) {
+      setLeaveForm({
+        startDate: new Date().toISOString().slice(0, 10),
+        endDate: new Date().toISOString().slice(0, 10),
+        reason: '',
+      })
+    } catch (error: any) {
       console.error('Failed to submit leave', error)
       setSubmissionState('error')
+      setErrorMessage(
+        error.response?.data?.detail || 
+        error.response?.data?.start_date?.[0] || 
+        error.response?.data?.end_date?.[0] || 
+        error.response?.data?.[0] || 
+        'Failed to submit leave request.'
+      )
     }
   }
 
@@ -118,6 +152,11 @@ export const LeavePage: React.FC = () => {
             {submissionState === 'submitted' && (
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-md text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-200">
                 Your leave request has been queued for manager review.
+              </div>
+            )}
+            {errorMessage && (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 p-md text-sm text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/20 dark:text-rose-200">
+                {errorMessage}
               </div>
             )}
             <div className="grid gap-md">
