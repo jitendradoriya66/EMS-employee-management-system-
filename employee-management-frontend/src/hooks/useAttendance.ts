@@ -98,7 +98,7 @@ export const useAttendance = (
 
         const ws = new WebSocket(wsUrl);
 
-        ws.onmessage = (event) => {
+        ws.onmessage = () => {
             try {
                 // If there's an update, just refetch to keep pagination/stats in sync
                 fetchRecords();

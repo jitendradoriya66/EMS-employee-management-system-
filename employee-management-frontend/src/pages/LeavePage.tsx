@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { CalendarDays, CheckCircle2, Clock3, AlertCircle, Users, ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
