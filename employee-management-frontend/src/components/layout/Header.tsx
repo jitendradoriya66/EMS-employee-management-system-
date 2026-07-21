@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Menu, Bell, User, Settings, LogOut, CheckCircle2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
@@ -20,6 +20,23 @@ export const Header: React.FC<HeaderProps> = ({
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
+  
+  const notificationsRef = useRef<HTMLDivElement>(null)
+  const profileRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setNotificationsOpen(false)
+      }
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setProfileOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
   
   const { logout } = useAuth()
   const navigate = useNavigate()
@@ -74,7 +91,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Right side */}
           <div className="flex items-center gap-md">
             {/* Notifications */}
-            <div className="relative">
+            <div className="relative" ref={notificationsRef}>
               <button
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
                 className="relative flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background/80 text-text-primary shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-card hover:shadow-md"
@@ -150,7 +167,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             {/* Profile Menu */}
-            <div className="relative">
+            <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
                 className="flex items-center gap-sm rounded-full border border-border bg-background/80 px-md py-sm shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-card hover:shadow-md"
@@ -191,7 +208,7 @@ export const Header: React.FC<HeaderProps> = ({
                     </button>
                     <button
                       onClick={() => handleProfileClick('logout')}
-                      className="mt-sm w-full border-t border-border px-md py-sm text-left text-sm text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-950/30"
+                      className="mt-sm w-full flex items-center gap-md border-t border-border px-md py-sm text-left text-sm text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-950/30"
                     >
                       <LogOut className="h-4 w-4" />
                       Sign Out
@@ -202,17 +219,6 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
         </div>
-
-        {/* Close dropdowns when clicking outside */} 
-        {(notificationsOpen || profileOpen) && (
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => {
-              setNotificationsOpen(false)
-              setProfileOpen(false)
-            }}
-          />
-        )}
       </header>
     </>
   )

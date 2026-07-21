@@ -7,6 +7,7 @@ import { Header } from '@/components/layout/Header'
 import { Sidebar, SidebarNav, SidebarNavItem } from '@/components/layout/Sidebar'
 import { Footer } from '@/components/layout/Footer'
 import { ProtectedRoute } from '@/components/common/ProtectedRoute'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { LoginPage } from '@/pages/LoginPage'
 import { RegisterPage } from '@/pages/RegisterPage'
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage'
@@ -111,6 +112,7 @@ function RoleGate({ allowedRoles, children }: { allowedRoles: UserRole[]; childr
 
 function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false)
   const { isAuthenticated, logout, user } = useAuth()
   const [activeNav, setActiveNav] = useState('dashboard')
   const location = useLocation()
@@ -170,7 +172,7 @@ function AppLayout() {
 
         <div className="mt-auto pt-md border-t border-slate-700 p-sm">
           <button
-            onClick={logout}
+            onClick={() => setIsLogoutConfirmOpen(true)}
             className="w-full flex items-center gap-2 px-sm py-[6px] text-sm rounded-lg text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-all duration-200"
           >
             <LogOut className="h-5 w-5 flex-shrink-0" />
@@ -178,6 +180,19 @@ function AppLayout() {
           </button>
         </div>
       </Sidebar>
+
+      <ConfirmDialog
+        isOpen={isLogoutConfirmOpen}
+        onCancel={() => setIsLogoutConfirmOpen(false)}
+        onConfirm={() => {
+          setIsLogoutConfirmOpen(false)
+          logout()
+        }}
+        title="Confirm Logout"
+        message="Are you sure you want to sign out?"
+        confirmText="Logout"
+        variant="danger"
+      />
 
       <div className="flex-1 flex flex-col overflow-hidden print:block print:overflow-visible">
         <Header
