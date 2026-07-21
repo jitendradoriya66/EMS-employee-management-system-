@@ -1,13 +1,26 @@
 from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.db.models import Avg, Count, Q
+from django.utils import timezone
+from datetime import timedelta
 from apps.attendance.models.attendance import Attendance
 from apps.attendance.serializers.attendance import AttendanceSerializer
+
+from rest_framework.filters import SearchFilter, OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
 
 class AttendanceViewSet(viewsets.ModelViewSet):
     queryset = Attendance.objects.all()
     serializer_class = AttendanceSerializer
     permission_classes = [IsAuthenticated]
-    pagination_class = None
+    
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    search_fields = ['employee__first_name', 'employee__last_name', 'employee__department__name']
+    filterset_fields = ['date', 'status']
+    ordering_fields = ['date', 'employee__first_name']
+    ordering = ['-date']
 
     def get_queryset(self):
         user = self.request.user
@@ -19,6 +32,32 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         if hasattr(user, 'employee_profile'):
             return Attendance.objects.filter(employee=user.employee_profile)
         return Attendance.objects.none()
+
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        qs = self.filter_queryset(self.get_queryset())
+        
+        total = qs.count()
+        present = qs.filter(status='present').count()
+        late = qs.filter(status='late').count()
+        leave = qs.filter(status='leave').count()
+        avg_hours = qs.aggregate(avg=Avg('hours_worked'))['avg'] or 0
+
+        thirty_days_ago = timezone.now().date() - timedelta(days=30)
+        daily_qs = qs.filter(date__gte=thirty_days_ago).values('date').annotate(
+            present=Count('id', filter=Q(status='present')),
+            late=Count('id', filter=Q(status='late')),
+            leave=Count('id', filter=Q(status='leave'))
+        ).order_by('-date')
+
+        return Response({
+            'total': total,
+            'present': present,
+            'late': late,
+            'leave': leave,
+            'average_hours': avg_hours,
+            'daily_summary': list(daily_qs)
+        })
 
     def perform_create(self, serializer):
         user = self.request.user

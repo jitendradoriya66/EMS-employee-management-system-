@@ -7,6 +7,9 @@ from apps.employees.serializers.employee import (
     EmployeeUpdateSerializer
 )
 
+from rest_framework.filters import SearchFilter, OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
+
 class EmployeeListAPIView(generics.ListAPIView):
     """
     API for listing all employees.
@@ -14,7 +17,12 @@ class EmployeeListAPIView(generics.ListAPIView):
     queryset = Employee.objects.select_related('user', 'department', 'manager__user').all()
     serializer_class = EmployeeListSerializer
     permission_classes = [IsAuthenticated]
-    pagination_class = None
+    
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    search_fields = ['first_name', 'last_name', 'department__name', 'designation', 'employee_id']
+    filterset_fields = ['department', 'status']
+    ordering_fields = ['first_name', 'date_of_joining']
+    ordering = ['first_name']
 
 class EmployeeCreateAPIView(generics.CreateAPIView):
     """

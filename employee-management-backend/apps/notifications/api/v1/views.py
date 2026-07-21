@@ -1,4 +1,5 @@
 from rest_framework import generics, status
+from rest_framework.filters import OrderingFilter
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django.contrib.auth import get_user_model
@@ -13,7 +14,10 @@ class NotificationListAPIView(generics.ListAPIView):
     """
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated]
-    pagination_class = None
+    
+    filter_backends = [OrderingFilter]
+    ordering_fields = ['created_at']
+    ordering = ['-created_at']
 
     def get_queryset(self):
         return Notification.objects.filter(user=self.request.user, notification_type='personal')
@@ -24,7 +28,10 @@ class AnnouncementListAPIView(generics.ListAPIView):
     """
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated]
-    pagination_class = None
+    
+    filter_backends = [OrderingFilter]
+    ordering_fields = ['created_at']
+    ordering = ['-created_at']
 
     def get_queryset(self):
         return Notification.objects.filter(user=self.request.user, notification_type='announcement')

@@ -2,10 +2,15 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.db.models import Sum, F, DecimalField
+from django.db.models.functions import Cast
 from apps.payroll.models import Payslip
 from apps.payroll.serializers.payslip import PayslipSerializer
 from apps.employees.models import Employee
 from apps.payroll.services import PayrollService
+
+from rest_framework.filters import SearchFilter, OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
 
 class PayslipViewSet(viewsets.ModelViewSet):
     """
@@ -13,7 +18,12 @@ class PayslipViewSet(viewsets.ModelViewSet):
     """
     serializer_class = PayslipSerializer
     permission_classes = [IsAuthenticated]
-    pagination_class = None
+    
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    search_fields = ['employee__first_name', 'employee__last_name', 'employee__department__name']
+    filterset_fields = ['month', 'year', 'status']
+    ordering_fields = ['year', 'month', 'employee__first_name']
+    ordering = ['-year', '-month']
 
     def get_queryset(self):
         user = self.request.user
@@ -24,6 +34,31 @@ class PayslipViewSet(viewsets.ModelViewSet):
             return Payslip.objects.filter(employee=employee)
         except Employee.DoesNotExist:
             return Payslip.objects.none()
+
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        qs = self.filter_queryset(self.get_queryset())
+        
+        # Calculate totals
+        total_gross = qs.aggregate(
+            total=Sum(Cast('gross_pay', output_field=DecimalField(max_digits=10, decimal_places=2)))
+        )['total'] or 0
+        
+        total_net = qs.aggregate(
+            total=Sum(Cast('net_pay', output_field=DecimalField(max_digits=10, decimal_places=2)))
+        )['total'] or 0
+
+        # Calculate by department
+        dept_qs = qs.values(dept_name=F('employee__department__name')).annotate(
+            total_gross=Sum(Cast('gross_pay', output_field=DecimalField(max_digits=10, decimal_places=2)))
+        ).order_by('-total_gross')
+        
+        return Response({
+            'total_gross': float(total_gross),
+            'total_net': float(total_net),
+            'total_monthly': float(total_gross) / 12 if total_gross else 0,
+            'departments': list(dept_qs)
+        })
 
     @action(detail=False, methods=['post'])
     def generate(self, request):

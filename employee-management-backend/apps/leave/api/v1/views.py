@@ -3,9 +3,15 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
+from django.db.models import Count, Q, F, Sum, IntegerField
+from django.db.models.functions import Cast, ExtractDay
+from django.utils import timezone
 from apps.leave.models import LeaveRequest
 from apps.leave.serializers.leave_request import LeaveRequestSerializer
 from apps.employees.models import Employee
+from rest_framework.filters import SearchFilter, OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
+
 class LeaveRequestViewSet(viewsets.ModelViewSet):
     """
     API for creating and viewing leave requests.
@@ -13,7 +19,12 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
     queryset = LeaveRequest.objects.all()
     serializer_class = LeaveRequestSerializer
     permission_classes = [IsAuthenticated]
-    pagination_class = None
+    
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    search_fields = ['employee__first_name', 'employee__last_name', 'employee__department__name', 'leave_type']
+    filterset_fields = ['status', 'leave_type']
+    ordering_fields = ['start_date', 'employee__first_name']
+    ordering = ['-start_date']
 
     def get_queryset(self):
         user = self.request.user
@@ -22,6 +33,40 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         if hasattr(user, 'employee_profile'):
             return LeaveRequest.objects.filter(employee=user.employee_profile)
         return LeaveRequest.objects.none()
+
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        qs = self.filter_queryset(self.get_queryset())
+        
+        user = request.user
+        is_employee = not (user.is_staff or getattr(user, 'role', 'employee') != 'employee')
+        
+        stats = {
+            'pending': qs.filter(status='pending').count(),
+            'approved': qs.filter(status='approved').count(),
+            'rejected': qs.filter(status='rejected').count(),
+        }
+
+        if is_employee:
+            # Calculate leave balance for employee (assuming 20 days total)
+            # This calculates total days for all approved leaves this year
+            current_year = timezone.now().year
+            approved_leaves = qs.filter(status='approved', start_date__year=current_year)
+            
+            # Simple approximation of days (end_date - start_date + 1)
+            used_days = 0
+            for leave in approved_leaves:
+                used_days += (leave.end_date - leave.start_date).days + 1
+                
+            stats['leave_balance'] = max(0, 20 - used_days)
+        else:
+            # Department summary for admins
+            dept_qs = qs.values(dept_name=F('employee__department__name')).annotate(
+                count=Count('id')
+            ).order_by('-count')
+            stats['departments'] = list(dept_qs)
+            
+        return Response(stats)
 
     def perform_create(self, serializer):
         try:
