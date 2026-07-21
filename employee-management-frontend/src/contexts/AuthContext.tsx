@@ -19,6 +19,7 @@ interface AuthContextType {
   toggleUserStatus: (userId: string) => void
   deleteUser: (userId: string) => void
   updateUserDetails: (userId: string, data: { name: string; email: string; department: string }) => void
+  updateCurrentUser: (data: { name: string; email: string }) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -220,18 +221,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const rejectUser = async (userId: string) => {
     try {
-      await apiClient.patch(`/api/v1/users/${userId}/`, { is_active: false, is_staff: false, is_superuser: false })
-      
-      const currentUser = users.find(account => account.id === userId)
-      if (!currentUser) return
-      const updatedUser: UserAccount = { ...currentUser, role: null, approvalStatus: 'rejected', accountStatus: 'inactive' }
-      persistUser(updatedUser)
+      await apiClient.delete(`/api/v1/users/${userId}/`)
+      setUsers(previousUsers => previousUsers.filter(account => account.id !== userId))
     } catch (err) {
-      console.error('Failed to reject user', err)
-      const currentUser = users.find(account => account.id === userId)
-      if (currentUser) {
-        persistUser({ ...currentUser, role: null, approvalStatus: 'rejected', accountStatus: 'inactive' })
-      }
+      console.error('Failed to reject (delete) user', err)
+      setUsers(previousUsers => previousUsers.filter(account => account.id !== userId))
     }
   }
 
@@ -308,6 +302,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
+  const updateCurrentUser = (data: { name: string; email: string }) => {
+    if (user) {
+      const updatedUser = { ...user, name: data.name, email: data.email }
+      setUser(updatedUser)
+      setUsers(prev => prev.map(u => u.id === user.id ? updatedUser : u))
+    }
+  }
+
   return (
     <AuthContext.Provider value={{
       isAuthenticated,
@@ -325,6 +327,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toggleUserStatus,
       deleteUser,
       updateUserDetails,
+      updateCurrentUser,
     }}>
       {children}
     </AuthContext.Provider>

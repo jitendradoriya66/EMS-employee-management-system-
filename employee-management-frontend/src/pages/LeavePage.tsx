@@ -9,6 +9,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { submitLeaveRequest } from '@/utils/api'
 import { useLeaveRequests } from '@/hooks/useLeaveRequests'
 import { CircleCheck, CircleX } from 'lucide-react'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { ModernPagination } from '@/components/common/ModernPagination'
 
 export const LeavePage: React.FC = () => {
   const { user } = useAuth()
@@ -21,6 +23,13 @@ export const LeavePage: React.FC = () => {
   })
   const [submissionState, setSubmissionState] = useState<'idle' | 'submitting' | 'submitted' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const [confirmApprove, setConfirmApprove] = useState<string | null>(null)
+  const [confirmReject, setConfirmReject] = useState<string | null>(null)
+
+  const [employeePage, setEmployeePage] = useState(1)
+  const [adminPage, setAdminPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(6)
 
   const myLeaveRequests = useMemo(() => {
     if (!isEmployee || !user?.name) return leaveRequests;
@@ -41,6 +50,22 @@ export const LeavePage: React.FC = () => {
       }, 0);
     return Math.max(0, totalAllowance - approvedDays);
   }, [myLeaveRequests]);
+
+  const paginatedMyLeaves = useMemo(() => {
+    const start = (employeePage - 1) * itemsPerPage
+    return myLeaveRequests.slice(start, start + itemsPerPage)
+  }, [employeePage, itemsPerPage, myLeaveRequests])
+  
+  const totalMyLeavesPages = Math.max(1, Math.ceil(myLeaveRequests.length / itemsPerPage))
+
+  const reviewedRequests = useMemo(() => leaveRequests.filter(r => r.status !== 'pending'), [leaveRequests])
+  
+  const paginatedReviewedLeaves = useMemo(() => {
+    const start = (adminPage - 1) * itemsPerPage
+    return reviewedRequests.slice(start, start + itemsPerPage)
+  }, [adminPage, itemsPerPage, reviewedRequests])
+
+  const totalAdminPages = Math.max(1, Math.ceil(reviewedRequests.length / itemsPerPage))
 
   const handleLeaveSubmit = async () => {
     try {
@@ -178,7 +203,7 @@ export const LeavePage: React.FC = () => {
               <Users className="h-5 w-5 text-primary-600" />
             </div>
             <div className="mt-md space-y-sm">
-              {myLeaveRequests.slice(0, 6).map(request => (
+              {paginatedMyLeaves.map(request => (
                 <div key={request.id} className="rounded-2xl border border-border bg-background p-md">
                   <div className="flex items-center justify-between gap-md">
                     <div>
@@ -195,6 +220,14 @@ export const LeavePage: React.FC = () => {
               ))}
               {myLeaveRequests.length === 0 && <p className="text-sm text-text-secondary">No leave history is available yet.</p>}
             </div>
+            
+            {myLeaveRequests.length > 0 && (
+              <ModernPagination
+                currentPage={employeePage}
+                totalPages={totalMyLeavesPages}
+                onPageChange={setEmployeePage}
+              />
+            )}
           </div>
         </div>
       </motion.div>
@@ -203,6 +236,32 @@ export const LeavePage: React.FC = () => {
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-lg">
+      <ConfirmDialog
+        isOpen={!!confirmApprove}
+        title="Approve Leave Request"
+        message="Are you sure you want to approve this leave request? This will deduct from the employee's leave balance."
+        confirmText="Approve"
+        variant="info"
+        onConfirm={() => {
+          if (confirmApprove) approveLeave(confirmApprove)
+          setConfirmApprove(null)
+        }}
+        onCancel={() => setConfirmApprove(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={!!confirmReject}
+        title="Reject Leave Request"
+        message="Are you sure you want to reject this leave request? The employee will be notified."
+        confirmText="Reject"
+        variant="danger"
+        onConfirm={() => {
+          if (confirmReject) rejectLeave(confirmReject)
+          setConfirmReject(null)
+        }}
+        onCancel={() => setConfirmReject(null)}
+      />
+
       <div className="rounded-3xl border border-border bg-card p-lg shadow-sm">
         <div className="flex flex-col gap-md lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -278,11 +337,11 @@ export const LeavePage: React.FC = () => {
                 </div>
                 <p className="mt-sm text-sm text-text-secondary">{request.reason}</p>
                 <div className="mt-md flex gap-sm">
-                  <Button variant="primary" className="flex-1 gap-sm" onClick={() => approveLeave(request.id)}>
+                  <Button variant="primary" className="flex-1 gap-sm" onClick={() => setConfirmApprove(request.id)}>
                     <CircleCheck className="h-4 w-4" />
                     Approve
                   </Button>
-                  <Button variant="secondary" className="flex-1 gap-sm" onClick={() => rejectLeave(request.id)}>
+                  <Button variant="secondary" className="flex-1 gap-sm" onClick={() => setConfirmReject(request.id)}>
                     <CircleX className="h-4 w-4" />
                     Reject
                   </Button>
@@ -304,7 +363,7 @@ export const LeavePage: React.FC = () => {
         </div>
 
         <div className="mt-md grid grid-cols-1 gap-sm sm:grid-cols-2 xl:grid-cols-3">
-          {leaveRequests.filter(r => r.status !== 'pending').slice(0, 6).map(request => (
+          {paginatedReviewedLeaves.map(request => (
             <div key={request.id} className="rounded-2xl border border-border bg-background p-md">
               <div className="flex items-center justify-between gap-md">
                 <div>
@@ -318,8 +377,16 @@ export const LeavePage: React.FC = () => {
               <p className="mt-sm text-sm text-text-secondary">{request.reason}</p>
             </div>
           ))}
-          {leaveRequests.filter(r => r.status !== 'pending').length === 0 && <p className="text-sm text-text-secondary col-span-full">No reviewed requests found.</p>}
+          {reviewedRequests.length === 0 && <p className="text-sm text-text-secondary col-span-full">No reviewed requests found.</p>}
         </div>
+        
+        {reviewedRequests.length > 0 && (
+          <ModernPagination
+            currentPage={adminPage}
+            totalPages={totalAdminPages}
+            onPageChange={setAdminPage}
+          />
+        )}
       </div>
     </motion.div>
   )

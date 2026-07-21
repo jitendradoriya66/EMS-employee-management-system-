@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import apiClient from '@/utils/apiClient'
 
 export interface Announcement {
@@ -15,10 +15,10 @@ export const useAnnouncements = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [loading, setLoading] = useState(true)
 
-  const fetchAnnouncements = async () => {
+  const fetchAnnouncements = useCallback(async () => {
     try {
       setLoading(true)
-      const { data } = await apiClient.get('/api/v1/notifications/')
+      const { data } = await apiClient.get('/api/v1/notifications/announcements/')
       const results = data.results || data
       setAnnouncements(Array.isArray(results) ? results.map((item: any) => ({
         id: item.id,
@@ -35,7 +35,7 @@ export const useAnnouncements = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   const broadcastAnnouncement = async (data: { title: string, message: string }) => {
     try {
@@ -47,9 +47,19 @@ export const useAnnouncements = () => {
     }
   }
 
+  const markAllAsRead = async () => {
+    try {
+      await apiClient.post('/api/v1/notifications/announcements/mark-read/')
+      await fetchAnnouncements()
+    } catch (err) {
+      console.error('Failed to mark announcements as read', err)
+      throw err
+    }
+  }
+
   useEffect(() => {
     fetchAnnouncements()
-  }, [])
+  }, [fetchAnnouncements])
 
-  return { announcements, loading, fetchAnnouncements, broadcastAnnouncement }
+  return { announcements, loading, fetchAnnouncements, broadcastAnnouncement, markAllAsRead }
 }

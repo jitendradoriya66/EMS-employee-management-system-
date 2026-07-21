@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import apiClient from '@/utils/apiClient'
 import { useEffect } from 'react'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 
 interface SettingSection {
   id: string
@@ -20,7 +21,7 @@ interface SettingSection {
 }
 
 export const SettingsPage: React.FC = () => {
-  const { user, logout } = useAuth()
+  const { user, logout, updateCurrentUser } = useAuth()
   const role = user?.role ?? 'employee'
   const isSuperAdmin = role === 'super_admin'
   const isAdmin = role !== 'employee'
@@ -37,6 +38,9 @@ export const SettingsPage: React.FC = () => {
       email: true,
     },
   })
+  
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   useEffect(() => {
     const fetchPrefs = async () => {
@@ -62,9 +66,23 @@ export const SettingsPage: React.FC = () => {
   ]
 
   const handleSave = async () => {
+    setErrorMessage(null)
+    setSaved(false)
+    
+    if (!formData.fullName.trim()) {
+      setErrorMessage("Full Name is required.")
+      return
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!formData.email.trim() || !emailRegex.test(formData.email)) {
+      setErrorMessage("Please enter a valid email address.")
+      return
+    }
+
     setSaving(true)
     try {
-      const parts = formData.fullName.split(' ')
+      const parts = formData.fullName.trim().split(' ')
       const first_name = parts[0] || ''
       const last_name = parts.slice(1).join(' ') || ''
       
@@ -80,10 +98,16 @@ export const SettingsPage: React.FC = () => {
         })
       ])
       
+      updateCurrentUser({ name: formData.fullName.trim(), email: formData.email.trim() })
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to save settings', err)
+      setErrorMessage(
+        err.response?.data?.email?.[0] || 
+        err.response?.data?.detail || 
+        "Failed to save settings. Please try again."
+      )
     } finally {
       setSaving(false)
     }
@@ -109,6 +133,19 @@ export const SettingsPage: React.FC = () => {
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-lg">
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        title="Confirm Logout"
+        message="Are you sure you want to log out of your account?"
+        confirmText="Logout"
+        variant="danger"
+        onConfirm={() => {
+          setShowLogoutConfirm(false)
+          handleLogout()
+        }}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
+
       {/* Header */}
       <div>
         <h1 className="section-title">Settings</h1>
@@ -118,6 +155,12 @@ export const SettingsPage: React.FC = () => {
       {saved && (
         <Alert variant="success" title="Success">
           Your settings have been saved successfully.
+        </Alert>
+      )}
+
+      {errorMessage && (
+        <Alert variant="error" title="Error">
+          {errorMessage}
         </Alert>
       )}
 
@@ -333,7 +376,7 @@ export const SettingsPage: React.FC = () => {
               <Button
                 variant="danger"
                 className="gap-sm"
-                onClick={handleLogout}
+                onClick={() => setShowLogoutConfirm(true)}
               >
                 <LogOut className="h-4 w-4" />
                 Logout

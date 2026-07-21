@@ -3,6 +3,7 @@ import { CalendarCheck2, CalendarX2, Clock3, Filter, Search, TrendingUp, Users, 
 import { motion } from 'framer-motion'
 import { useAttendance } from '@/hooks/useAttendance'
 import { useAuth } from '@/contexts/AuthContext'
+import { ModernPagination } from '@/components/common/ModernPagination'
 
 type AttendanceStatus = 'present' | 'late' | 'leave'
 
@@ -61,15 +62,6 @@ export const AttendancePage: React.FC = () => {
     }
   }
 
-  const today = new Date().toISOString().split('T')[0]
-  // Find if there is a currently active check-in (no check out yet)
-  const activeRecord = records.find(r => r.date === today && (isEmployee ? r.employeeId === user?.id : true) && !r.checkOut)
-  const todaysRecords = records.filter(r => r.date === today && (isEmployee ? r.employeeId === user?.id : true))
-  
-  const hasCheckedIn = !!activeRecord // True if currently in a session
-  const hasCompletedSession = todaysRecords.some(r => r.checkIn && r.checkOut)
-  const isShiftComplete = !hasCheckedIn && hasCompletedSession
-
   const departments = useMemo(() => ['all', ...new Set(records.map(record => record.department))], [records])
 
   const filteredRecords = useMemo(() => {
@@ -88,6 +80,14 @@ export const AttendancePage: React.FC = () => {
       })
       .sort((a, b) => b.date.localeCompare(a.date))
   }, [departmentFilter, records, search, statusFilter, isEmployee, user?.name])
+
+  const today = new Date().toISOString().split('T')[0]
+  const todaysRecords = filteredRecords.filter(r => r.date === today)
+  const activeRecord = todaysRecords.find(r => !r.checkOut)
+  
+  const hasCheckedIn = !!activeRecord // True if currently in a session
+  const hasCompletedSession = todaysRecords.some(r => r.checkIn && r.checkOut)
+  const isShiftComplete = !hasCheckedIn && hasCompletedSession
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredRecords.length / itemsPerPage)), [filteredRecords.length, itemsPerPage])
 
@@ -381,29 +381,11 @@ export const AttendancePage: React.FC = () => {
               </select>
             </div>
 
-            <div className="flex items-center gap-sm">
-              <button
-                type="button"
-                onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
-                disabled={currentPage === 1}
-                className="inline-flex items-center gap-xs px-md py-sm rounded-lg border border-border bg-background text-text-primary disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </button>
-              <span className="text-sm font-semibold text-text-secondary">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
-                disabled={currentPage === totalPages}
-                className="inline-flex items-center gap-xs px-md py-sm rounded-lg border border-border bg-background text-text-primary disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
+            <ModernPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           </div>
         )}
       </div>

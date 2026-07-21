@@ -6,6 +6,7 @@ import { usePayslips } from '@/hooks/usePayslips'
 import { formatCurrency } from '@/utils/helpers'
 import { useAuth } from '@/contexts/AuthContext'
 import { PayslipModal } from '@/components/payroll/PayslipModal'
+import { ModernPagination } from '@/components/common/ModernPagination'
 
 export const PayrollPage: React.FC = () => {
   const { payslips, loading, generate, approve } = usePayslips();
@@ -27,6 +28,24 @@ export const PayrollPage: React.FC = () => {
   const currentPayslip = useMemo(() => {
     return myPayslips.length > 0 ? myPayslips[0] : null;
   }, [myPayslips]);
+
+  const [employeePage, setEmployeePage] = useState(1);
+  const [adminPage, setAdminPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(6);
+
+  const paginatedMyPayslips = useMemo(() => {
+    const start = (employeePage - 1) * itemsPerPage;
+    return myPayslips.slice(start, start + itemsPerPage);
+  }, [employeePage, itemsPerPage, myPayslips]);
+
+  const totalMyPayslipsPages = Math.max(1, Math.ceil(myPayslips.length / itemsPerPage));
+
+  const paginatedPayslips = useMemo(() => {
+    const start = (adminPage - 1) * itemsPerPage;
+    return payslips.slice(start, start + itemsPerPage);
+  }, [adminPage, itemsPerPage, payslips]);
+
+  const totalPayslipsPages = Math.max(1, Math.ceil(payslips.length / itemsPerPage));
 
   const payroll = useMemo(() => {
     const byDepartment = payslips.reduce<Record<string, number>>((accumulator, slip) => {
@@ -122,7 +141,7 @@ export const PayrollPage: React.FC = () => {
                 <p>No payslips have been generated for you yet.</p>
               </div>
             ) : (
-              myPayslips.map(slip => (
+              paginatedMyPayslips.map(slip => (
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -167,6 +186,16 @@ export const PayrollPage: React.FC = () => {
               ))
             )}
           </div>
+          
+          {myPayslips.length > 0 && (
+            <div className="mt-md">
+              <ModernPagination
+                currentPage={employeePage}
+                totalPages={totalMyPayslipsPages}
+                onPageChange={setEmployeePage}
+              />
+            </div>
+          )}
         </div>
       </motion.div>
     )
@@ -309,7 +338,7 @@ export const PayrollPage: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {payslips.map(slip => (
+                      {paginatedPayslips.map(slip => (
                         <tr key={slip.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                           <td className="px-4 py-4 font-bold text-text-primary">{slip.employeeName}</td>
                           <td className="px-4 py-4 text-text-secondary">{slip.period_start} <span className="text-slate-400">to</span> {slip.period_end}</td>
@@ -350,6 +379,16 @@ export const PayrollPage: React.FC = () => {
                 </div>
               )}
             </div>
+            
+            {payslips.length > 0 && (
+              <div className="mt-md">
+                <ModernPagination
+                  currentPage={adminPage}
+                  totalPages={totalPayslipsPages}
+                  onPageChange={setAdminPage}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

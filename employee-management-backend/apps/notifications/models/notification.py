@@ -7,6 +7,7 @@ User = get_user_model()
 class Notification(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notifications")
+    notification_type = models.CharField(max_length=20, choices=[('announcement', 'Announcement'), ('personal', 'Personal')], default='personal')
     title = models.CharField(max_length=255)
     message = models.TextField()
     is_read = models.BooleanField(default=False)

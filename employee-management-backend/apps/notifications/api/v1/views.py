@@ -9,13 +9,23 @@ User = get_user_model()
 
 class NotificationListAPIView(generics.ListAPIView):
     """
-    API for listing notifications for the authenticated user.
+    API for listing personal notifications for the authenticated user.
     """
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Notification.objects.filter(user=self.request.user)
+        return Notification.objects.filter(user=self.request.user, notification_type='personal')
+
+class AnnouncementListAPIView(generics.ListAPIView):
+    """
+    API for listing announcements for the authenticated user.
+    """
+    serializer_class = NotificationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Notification.objects.filter(user=self.request.user, notification_type='announcement')
 
 class BroadcastNotificationAPIView(generics.CreateAPIView):
     """
@@ -33,7 +43,7 @@ class BroadcastNotificationAPIView(generics.CreateAPIView):
             
         users = User.objects.all()
         notifications = [
-            Notification(user=u, title=title, message=message)
+            Notification(user=u, title=title, message=message, notification_type='announcement')
             for u in users
         ]
         Notification.objects.bulk_create(notifications)
@@ -42,10 +52,20 @@ class BroadcastNotificationAPIView(generics.CreateAPIView):
 
 class MarkAllReadAPIView(generics.GenericAPIView):
     """
-    API for marking all notifications as read for the authenticated user.
+    API for marking all personal notifications as read for the authenticated user.
     """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        Notification.objects.filter(user=request.user, is_read=False, notification_type='personal').update(is_read=True)
         return Response({"detail": "All notifications marked as read."}, status=status.HTTP_200_OK)
+
+class MarkAnnouncementsReadAPIView(generics.GenericAPIView):
+    """
+    API for marking all announcements as read for the authenticated user.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        Notification.objects.filter(user=request.user, is_read=False, notification_type='announcement').update(is_read=True)
+        return Response({"detail": "All announcements marked as read."}, status=status.HTTP_200_OK)

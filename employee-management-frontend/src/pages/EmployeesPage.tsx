@@ -7,7 +7,7 @@ import { Button } from '@/components/common/Button'
 import { EmployeeList } from '@/components/employees/EmployeeList'
 import { EmployeeFilters } from '@/components/employees/EmployeeFilters'
 import { EmployeeForm } from '@/components/employees/EmployeeForm'
-import { DeleteConfirmDialog } from '@/components/employees/DeleteConfirmDialog'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { Alert } from '@/components/common/Alert'
 import { useAsync, useDebounce } from '@/hooks'
 import { AnimatePresence } from 'framer-motion'
@@ -234,8 +234,12 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ setActiveNav }) =>
         )}
 
         {deletingEmployee && (
-          <DeleteConfirmDialog
-            employeeName={`${deletingEmployee.firstName} ${deletingEmployee.lastName}`}
+          <ConfirmDialog
+            isOpen={!!deletingEmployee}
+            title="Delete Employee"
+            message={`Are you sure you want to delete ${deletingEmployee.firstName} ${deletingEmployee.lastName}? This action cannot be undone and will permanently remove all associated records.`}
+            confirmText="Delete"
+            variant="danger"
             onConfirm={handleConfirmDelete}
             onCancel={() => setDeletingEmployee(null)}
             isLoading={deleteLoading}

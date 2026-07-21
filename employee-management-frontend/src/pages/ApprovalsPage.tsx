@@ -7,6 +7,7 @@ import { Badge } from '@/components/common/Badge'
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
 import { Select } from '@/components/common/Select'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import type { UserAccount, UserRole } from '@/types'
 
 const roleLabels: Record<UserRole, string> = {
@@ -38,6 +39,9 @@ export const ApprovalsPage: React.FC = () => {
   const [search, setSearch] = useState('')
   const [roleSelection, setRoleSelection] = useState<Record<string, UserRole>>({})
   const [focusedUser, setFocusedUser] = useState<UserAccount | null>(null)
+  
+  const [confirmApprove, setConfirmApprove] = useState<UserAccount | null>(null)
+  const [confirmReject, setConfirmReject] = useState<UserAccount | null>(null)
 
   React.useEffect(() => {
     fetchUsers()
@@ -56,11 +60,42 @@ export const ApprovalsPage: React.FC = () => {
 
   const approve = (user: UserAccount) => {
     approveUser(user.id, roleSelection[user.id] || 'employee')
+    setConfirmApprove(null)
+    setFocusedUser(null)
+  }
+
+  const reject = (user: UserAccount) => {
+    rejectUser(user.id)
+    setConfirmReject(null)
     setFocusedUser(null)
   }
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-lg">
+      {confirmApprove && (
+        <ConfirmDialog
+          isOpen={true}
+          title="Approve User Registration"
+          message={`Are you sure you want to approve ${confirmApprove.name} as ${roleLabels[roleSelection[confirmApprove.id] || 'employee']}? They will gain access to the system.`}
+          confirmText="Approve"
+          variant="info"
+          onConfirm={() => approve(confirmApprove)}
+          onCancel={() => setConfirmApprove(null)}
+        />
+      )}
+      
+      {confirmReject && (
+        <ConfirmDialog
+          isOpen={true}
+          title="Reject User Registration"
+          message={`Are you sure you want to reject ${confirmReject.name}? Their registration details will be permanently deleted.`}
+          confirmText="Reject"
+          variant="danger"
+          onConfirm={() => reject(confirmReject)}
+          onCancel={() => setConfirmReject(null)}
+        />
+      )}
+
       <div className="rounded-3xl border border-border bg-card p-lg shadow-xl shadow-slate-900/5">
         <div className="flex flex-col gap-md lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -145,11 +180,11 @@ export const ApprovalsPage: React.FC = () => {
                   <Button variant="secondary" className="px-md" onClick={() => setFocusedUser(user)} aria-label="View details">
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button variant="primary" className="flex-1 gap-sm" onClick={() => approve(user)}>
+                  <Button variant="primary" className="flex-1 gap-sm" onClick={() => setConfirmApprove(user)}>
                     <CircleCheck className="h-4 w-4" />
                     Approve
                   </Button>
-                  <Button variant="secondary" className="px-md text-red-600 hover:bg-red-50 hover:border-red-200 dark:hover:bg-red-950/30" onClick={() => rejectUser(user.id)} aria-label="Reject">
+                  <Button variant="secondary" className="px-md text-red-600 hover:bg-red-50 hover:border-red-200 dark:hover:bg-red-950/30" onClick={() => setConfirmReject(user)} aria-label="Reject">
                     <CircleX className="h-4 w-4" />
                   </Button>
                 </div>
@@ -218,11 +253,11 @@ export const ApprovalsPage: React.FC = () => {
                   Review the registration details, assign the correct role on the card if needed, and finalize the workflow.
                 </p>
                 <div className="mt-lg flex flex-col gap-sm sm:flex-row">
-                  <Button variant="primary" className="flex-1 gap-sm" onClick={() => approve(focusedUser)}>
+                  <Button variant="primary" className="flex-1 gap-sm" onClick={() => setConfirmApprove(focusedUser)}>
                     <CircleCheck className="h-4 w-4" />
                     Approve request
                   </Button>
-                  <Button variant="secondary" className="flex-1 gap-sm border-white/20 text-white hover:bg-white/10" onClick={() => rejectUser(focusedUser.id)}>
+                  <Button variant="secondary" className="flex-1 gap-sm border-white/20 text-white hover:bg-white/10" onClick={() => setConfirmReject(focusedUser)}>
                     <CircleX className="h-4 w-4" />
                     Reject request
                   </Button>
