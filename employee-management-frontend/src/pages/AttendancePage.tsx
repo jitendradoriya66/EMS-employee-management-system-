@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { CalendarCheck2, CalendarX2, Clock3, Filter, Search, TrendingUp, Users, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarCheck2, CalendarX2, Clock3, Filter, Search, TrendingUp, Users, ChevronRight } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useAttendance } from '@/hooks/useAttendance'
 import { useAuth } from '@/contexts/AuthContext'

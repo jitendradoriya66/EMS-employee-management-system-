@@ -33,7 +33,6 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
   onRetry,
   currentPage = 1,
   totalPages = 1,
-  totalItems = 0,
   itemsPerPage = 6,
   onPageChange,
   onItemsPerPageChange,

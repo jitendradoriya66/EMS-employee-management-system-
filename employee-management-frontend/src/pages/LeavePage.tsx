@@ -29,7 +29,7 @@ export const LeavePage: React.FC = () => {
 
   const [employeePage, setEmployeePage] = useState(1)
   const [adminPage, setAdminPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(6)
+  const itemsPerPage = 6
 
   const myLeaveRequests = useMemo(() => {
     if (!isEmployee || !user?.name) return leaveRequests;

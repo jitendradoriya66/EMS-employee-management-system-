@@ -31,7 +31,7 @@ export const PayrollPage: React.FC = () => {
 
   const [employeePage, setEmployeePage] = useState(1);
   const [adminPage, setAdminPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(6);
+  const itemsPerPage = 6;
 
   const paginatedMyPayslips = useMemo(() => {
     const start = (employeePage - 1) * itemsPerPage;
