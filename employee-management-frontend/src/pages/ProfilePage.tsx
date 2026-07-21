@@ -11,6 +11,7 @@ export const ProfilePage: React.FC = () => {
   const { user } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     firstName: 'John',
     lastName: 'Doe',
@@ -83,6 +84,7 @@ export const ProfilePage: React.FC = () => {
 
   const handleSave = async () => {
     setIsSaving(true)
+    setErrorMessage(null)
     try {
       if (employeeProfile) {
         await updateEmployee(employeeProfile.id, {
@@ -95,8 +97,9 @@ export const ProfilePage: React.FC = () => {
         });
       }
       setIsEditing(false)
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to update profile", e)
+      setErrorMessage(e.response?.data?.detail || e.message || "Failed to update profile.")
     } finally {
       setIsSaving(false)
     }
@@ -155,6 +158,12 @@ export const ProfilePage: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {errorMessage && (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-md text-sm text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/20 dark:text-rose-200 no-print">
+          {errorMessage}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-md no-print">
         {[

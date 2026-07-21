@@ -133,7 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return tempUser;
     } catch (error: any) {
       console.error('Login error:', error);
-      throw new Error(error.response?.data?.detail || 'Invalid email or password');
+      throw error;
     }
   }
 
@@ -153,7 +153,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error('Failed to fetch user after Google login');
     } catch (error: any) {
       console.error('Google Login error:', error);
-      throw new Error(error.response?.data?.error || 'Google Login failed');
+      throw error;
     }
   }
 

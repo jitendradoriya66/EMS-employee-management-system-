@@ -29,8 +29,12 @@ export const LoginPage: React.FC = () => {
       }
       await login(email, password, rememberMe)
       navigate('/dashboard')
-    } catch (err) {
-      setError('Login failed. Please try again.')
+    } catch (err: any) {
+      setError(
+        err.response?.data?.detail || 
+        err.response?.data?.non_field_errors?.[0] || 
+        'Login failed. Please check your credentials and try again.'
+      )
     } finally {
       setLoading(false)
     }
@@ -128,8 +132,12 @@ export const LoginPage: React.FC = () => {
                     await googleLogin(credentialResponse.credential);
                     navigate('/dashboard');
                   }
-                } catch (err) {
-                  setError('Google Login failed. Please try again.');
+                } catch (err: any) {
+                  setError(
+                    err.response?.data?.detail || 
+                    err.response?.data?.error || 
+                    'Google Login failed. Please try again.'
+                  );
                 } finally {
                   setLoading(false);
                 }

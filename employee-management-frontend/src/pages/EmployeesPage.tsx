@@ -37,6 +37,7 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ setActiveNav }) =>
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [formLoading, setFormLoading] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
@@ -125,8 +126,9 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ setActiveNav }) =>
       setShowForm(false)
       setEditingEmployee(null)
       await refetch()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving employee:', error)
+      throw error
     } finally {
       setFormLoading(false)
     }
@@ -137,12 +139,14 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ setActiveNav }) =>
 
     setDeleteLoading(true)
     try {
+      setErrorMessage(null)
       await deleteEmployee(deletingEmployee.id)
       setSuccessMessage('Employee deleted successfully')
       setDeletingEmployee(null)
       await refetch()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting employee:', error)
+      setErrorMessage(error.response?.data?.detail || error.message || 'Failed to delete employee')
     } finally {
       setDeleteLoading(false)
     }
@@ -177,6 +181,15 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ setActiveNav }) =>
             onClose={() => setSuccessMessage(null)}
           >
             {successMessage}
+          </Alert>
+        )}
+        {errorMessage && (
+          <Alert
+            variant="error"
+            title="Error"
+            onClose={() => setErrorMessage(null)}
+          >
+            {errorMessage}
           </Alert>
         )}
       </AnimatePresence>

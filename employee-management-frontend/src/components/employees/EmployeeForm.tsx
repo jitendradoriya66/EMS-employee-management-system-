@@ -33,6 +33,7 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
     }
   )
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [formError, setFormError] = useState<string | null>(null)
 
   const departments = getDepartments()
 
@@ -66,9 +67,17 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
     if (!validateForm()) return
 
     try {
+      setFormError(null)
       await onSubmit(formData)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Form submission error:', error)
+      setFormError(
+        error.response?.data?.detail ||
+        error.response?.data?.email?.[0] ||
+        error.response?.data?.employee_id?.[0] ||
+        error.message ||
+        'Failed to save employee. Please check the provided information.'
+      )
     }
   }
 
@@ -86,14 +95,20 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
           </h2>
           <button
             onClick={onCancel}
-            className="p-xs hover:bg-slate-100 rounded transition-colors"
+            className="p-xs hover:bg-slate-100 rounded transition-colors dark:hover:bg-slate-800"
             aria-label="Close form"
+            type="button"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-lg space-y-md">
+          {formError && (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-md text-sm text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/20 dark:text-rose-200">
+              {formError}
+            </div>
+          )}
           {/* Name Fields */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
             <Input

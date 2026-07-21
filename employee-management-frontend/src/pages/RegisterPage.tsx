@@ -51,7 +51,13 @@ export const RegisterPage: React.FC = () => {
       setSuccess('Registration successful! Your account is pending admin approval to access Workforce Hub. Redirecting to login...')
       setTimeout(() => navigate('/login'), 4000)
     } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.')
+      setError(
+        err.response?.data?.detail || 
+        err.response?.data?.email?.[0] || 
+        err.response?.data?.non_field_errors?.[0] || 
+        err.message || 
+        'Registration failed. Please try again.'
+      )
     } finally {
       setLoading(false)
     }
