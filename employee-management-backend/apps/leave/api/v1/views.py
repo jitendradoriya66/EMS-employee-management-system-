@@ -28,10 +28,16 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        qs = LeaveRequest.objects.all()
+        
+        exclude_status = self.request.query_params.get('exclude_status')
+        if exclude_status:
+            qs = qs.exclude(status=exclude_status)
+            
         if user.is_staff or getattr(user, 'role', 'employee') != 'employee':
-            return LeaveRequest.objects.all()
+            return qs
         if hasattr(user, 'employee_profile'):
-            return LeaveRequest.objects.filter(employee=user.employee_profile)
+            return qs.filter(employee=user.employee_profile)
         return LeaveRequest.objects.none()
 
     @action(detail=False, methods=['get'])

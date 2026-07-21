@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import apiClient from '@/utils/apiClient'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -14,18 +14,58 @@ export interface AttendanceRecord {
   status: 'present' | 'late' | 'leave'
 }
 
-export const useAttendance = () => {
+export interface AttendanceStats {
+  total: number
+  present: number
+  late: number
+  leave: number
+  average_hours: number
+  daily_summary: Array<{
+    date: string
+    present: number
+    late: number
+    leave: number
+  }>
+}
+
+export const useAttendance = (
+  page: number = 1,
+  pageSize: number = 8,
+  search: string = '',
+  department: string = 'all',
+  status: string = 'all'
+) => {
   const [records, setRecords] = useState<AttendanceRecord[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [stats, setStats] = useState<AttendanceStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
 
-  const fetchRecords = async () => {
+  const fetchRecords = useCallback(async () => {
     try {
       setLoading(true)
-      const { data } = await apiClient.get('/api/v1/attendance/')
       
-      const formatted = (data.results || data).map((item: any) => ({
+      const params = new URLSearchParams({
+        page: page.toString(),
+        page_size: pageSize.toString(),
+      })
+      
+      if (search) params.append('search', search)
+      if (department !== 'all') params.append('employee__department__name', department)
+      if (status !== 'all') params.append('status', status)
+      
+      // Fetch paginated records
+      const { data } = await apiClient.get(`/api/v1/attendance/?${params.toString()}`)
+      
+      // Fetch overall stats
+      const { data: statsData } = await apiClient.get(`/api/v1/attendance/stats/?${params.toString()}`)
+      
+      const items = data.results || data
+      setTotalCount(data.count || items.length)
+      setStats(statsData)
+      
+      const formatted = items.map((item: any) => ({
         id: item.id,
         employeeId: item.employee?.id || user?.id,
         employeeName: item.employee ? `${item.employee.firstName} ${item.employee.lastName}` : user?.name,
@@ -43,15 +83,15 @@ export const useAttendance = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [page, pageSize, search, department, status, user])
 
   useEffect(() => {
     if (user) {
         fetchRecords()
         
+        // ... (WebSocket code removed for brevity in diffs, let's keep it but just re-trigger fetch)
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.host; // Replace with actual backend if needed
-        // Assuming backend runs on port 8000 locally, or same host in prod
+        const host = window.location.host;
         const wsUrl = import.meta.env.VITE_API_URL 
           ? import.meta.env.VITE_API_URL.replace('http', 'ws') + '/ws/attendance/'
           : `${protocol}//${host}/ws/attendance/`;
@@ -60,31 +100,8 @@ export const useAttendance = () => {
 
         ws.onmessage = (event) => {
             try {
-                const data = JSON.parse(event.data);
-                if (data.message && data.message.data) {
-                    const newRecord = data.message.data;
-                    
-                    const formattedRecord = {
-                        id: newRecord.id,
-                        employeeId: newRecord.employee?.id || '',
-                        employeeName: newRecord.employee ? `${newRecord.employee.firstName} ${newRecord.employee.lastName}` : 'Unknown',
-                        department: newRecord.employee?.department || 'Unassigned',
-                        date: newRecord.date,
-                        checkIn: newRecord.checkIn,
-                        checkOut: newRecord.checkOut,
-                        hoursWorked: newRecord.hoursWorked,
-                        status: newRecord.status,
-                    };
-
-                    setRecords(prev => {
-                        const exists = prev.find(r => r.id === formattedRecord.id);
-                        if (exists) {
-                            return prev.map(r => r.id === formattedRecord.id ? formattedRecord : r);
-                        } else {
-                            return [formattedRecord, ...prev];
-                        }
-                    });
-                }
+                // If there's an update, just refetch to keep pagination/stats in sync
+                fetchRecords();
             } catch (e) {
                 console.error("WebSocket message parsing error:", e);
             }
@@ -94,7 +111,7 @@ export const useAttendance = () => {
             ws.close();
         };
     }
-  }, [user])
+  }, [user, fetchRecords])
 
   const checkIn = async () => {
     try {
@@ -117,8 +134,23 @@ export const useAttendance = () => {
   const checkOut = async () => {
     try {
       const today = new Date().toISOString().split('T')[0]
-      const activeRecord = records.find(r => r.date === today && !r.checkOut)
+      let activeRecord = records.find(r => r.date === today && !r.checkOut)
       
+      if (!activeRecord) {
+        // Query backend if not on current page
+        const { data } = await apiClient.get(`/api/v1/attendance/?date=${today}`)
+        const items = data.results || data
+        const item = items.find((r: any) => !r.checkOut)
+        if (item) {
+           activeRecord = {
+             id: item.id,
+             checkIn: item.checkIn,
+             checkOut: item.checkOut,
+             date: item.date
+           } as any
+        }
+      }
+
       if (!activeRecord) {
         throw new Error('No active check-in found for today')
       }
@@ -142,5 +174,5 @@ export const useAttendance = () => {
     }
   }
 
-  return { records, loading, error, checkIn, checkOut, fetchRecords }
+  return { records, totalCount, stats, loading, error, checkIn, checkOut, fetchRecords }
 }

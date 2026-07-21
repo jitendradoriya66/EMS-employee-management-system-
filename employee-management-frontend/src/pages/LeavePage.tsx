@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { CalendarDays, CheckCircle2, Clock3, AlertCircle, Users, ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -6,7 +6,6 @@ import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
 import { formatDate } from '@/utils/helpers'
 import { useAuth } from '@/contexts/AuthContext'
-import { submitLeaveRequest } from '@/utils/api'
 import { useLeaveRequests } from '@/hooks/useLeaveRequests'
 import { CircleCheck, CircleX } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
@@ -14,8 +13,16 @@ import { ModernPagination } from '@/components/common/ModernPagination'
 
 export const LeavePage: React.FC = () => {
   const { user } = useAuth()
-  const { leaveRequests, approveLeave, rejectLeave } = useLeaveRequests()
   const isEmployee = (user?.role ?? 'employee') === 'employee'
+  
+  const {
+    employeeLeaves, employeeTotalCount,
+    pendingLeaves, reviewedLeaves, reviewedTotalCount,
+    stats, loading,
+    fetchEmployeeLeaves, fetchAdminLeaves,
+    approveLeave, rejectLeave, submitLeave
+  } = useLeaveRequests()
+
   const [leaveForm, setLeaveForm] = useState({
     startDate: new Date().toISOString().slice(0, 10),
     endDate: new Date().toISOString().slice(0, 10),
@@ -31,41 +38,18 @@ export const LeavePage: React.FC = () => {
   const [adminPage, setAdminPage] = useState(1)
   const itemsPerPage = 6
 
-  const myLeaveRequests = useMemo(() => {
-    if (!isEmployee || !user?.name) return leaveRequests;
-    return leaveRequests.filter(r => r.employeeName.toLowerCase() === user.name.toLowerCase());
-  }, [isEmployee, user?.name, leaveRequests]);
+  useEffect(() => {
+    if (isEmployee) {
+      fetchEmployeeLeaves(employeePage, itemsPerPage)
+    } else {
+      fetchAdminLeaves(adminPage, itemsPerPage)
+    }
+  }, [isEmployee, employeePage, adminPage, itemsPerPage, fetchEmployeeLeaves, fetchAdminLeaves])
 
-  const leaveBalance = useMemo(() => {
-    const totalAllowance = 20;
-    const approvedDays = myLeaveRequests
-      .filter(r => r.status === 'approved')
-      .reduce((total, r) => {
-        const start = new Date(r.start_date);
-        const end = new Date(r.end_date);
-        const diffTime = end.getTime() - start.getTime();
-        if (diffTime < 0) throw new Error("End date cannot be before start date");
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-        return total + diffDays;
-      }, 0);
-    return Math.max(0, totalAllowance - approvedDays);
-  }, [myLeaveRequests]);
-
-  const paginatedMyLeaves = useMemo(() => {
-    const start = (employeePage - 1) * itemsPerPage
-    return myLeaveRequests.slice(start, start + itemsPerPage)
-  }, [employeePage, itemsPerPage, myLeaveRequests])
+  const totalMyLeavesPages = Math.max(1, Math.ceil(employeeTotalCount / itemsPerPage))
+  const totalAdminPages = Math.max(1, Math.ceil(reviewedTotalCount / itemsPerPage))
   
-  const totalMyLeavesPages = Math.max(1, Math.ceil(myLeaveRequests.length / itemsPerPage))
-
-  const reviewedRequests = useMemo(() => leaveRequests.filter(r => r.status !== 'pending'), [leaveRequests])
-  
-  const paginatedReviewedLeaves = useMemo(() => {
-    const start = (adminPage - 1) * itemsPerPage
-    return reviewedRequests.slice(start, start + itemsPerPage)
-  }, [adminPage, itemsPerPage, reviewedRequests])
-
-  const totalAdminPages = Math.max(1, Math.ceil(reviewedRequests.length / itemsPerPage))
+  const leaveBalance = stats?.leave_balance ?? 20
 
   const handleLeaveSubmit = async () => {
     try {
@@ -91,11 +75,12 @@ export const LeavePage: React.FC = () => {
       }
 
       setSubmissionState('submitting')
-      await submitLeaveRequest({
+      await submitLeave({
         start_date: leaveForm.startDate,
         end_date: leaveForm.endDate,
         reason: leaveForm.reason
-      })
+      }, employeePage)
+      
       setSubmissionState('submitted')
       setLeaveForm({
         startDate: new Date().toISOString().slice(0, 10),
@@ -115,22 +100,6 @@ export const LeavePage: React.FC = () => {
     }
   }
 
-  const leaveSummary = useMemo(() => {
-    const totalRequests = leaveRequests.length
-    const byDepartment = leaveRequests.reduce<Record<string, number>>((accumulator, req) => {
-      const dept = req.department || 'Unknown'
-      accumulator[dept] = (accumulator[dept] || 0) + 1
-      return accumulator
-    }, {})
-
-    return {
-      totalRequests,
-      departments: Object.entries(byDepartment).sort((a, b) => b[1] - a[1]),
-      approved: leaveRequests.filter(r => r.status === 'approved').length,
-      rejected: leaveRequests.filter(r => r.status === 'rejected').length,
-    }
-  }, [leaveRequests])
-
   if (isEmployee) {
     return (
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-lg">
@@ -149,8 +118,8 @@ export const LeavePage: React.FC = () => {
           <div className="mt-lg grid grid-cols-1 gap-md sm:grid-cols-3">
             {[
               { label: 'Available balance', value: `${leaveBalance} days`, icon: CalendarDays },
-              { label: 'Pending requests', value: String(myLeaveRequests.filter(r => r.status === 'pending').length), icon: Clock3 },
-              { label: 'Approved leaves', value: String(myLeaveRequests.filter(r => r.status === 'approved').length), icon: CheckCircle2 },
+              { label: 'Pending requests', value: String(stats?.pending || 0), icon: Clock3 },
+              { label: 'Approved leaves', value: String(stats?.approved || 0), icon: CheckCircle2 },
             ].map(item => {
               const Icon = item.icon
               return (
@@ -203,7 +172,7 @@ export const LeavePage: React.FC = () => {
               <Users className="h-5 w-5 text-primary-600" />
             </div>
             <div className="mt-md space-y-sm">
-              {paginatedMyLeaves.map(request => (
+              {employeeLeaves.map(request => (
                 <div key={request.id} className="rounded-2xl border border-border bg-background p-md">
                   <div className="flex items-center justify-between gap-md">
                     <div>
@@ -218,10 +187,10 @@ export const LeavePage: React.FC = () => {
                   <p className="mt-sm text-sm text-text-secondary">{request.reason}</p>
                 </div>
               ))}
-              {myLeaveRequests.length === 0 && <p className="text-sm text-text-secondary">No leave history is available yet.</p>}
+              {!loading && employeeTotalCount === 0 && <p className="text-sm text-text-secondary">No leave history is available yet.</p>}
             </div>
             
-            {myLeaveRequests.length > 0 && (
+            {employeeTotalCount > 0 && (
               <ModernPagination
                 currentPage={employeePage}
                 totalPages={totalMyLeavesPages}
@@ -243,7 +212,7 @@ export const LeavePage: React.FC = () => {
         confirmText="Approve"
         variant="info"
         onConfirm={() => {
-          if (confirmApprove) approveLeave(confirmApprove)
+          if (confirmApprove) approveLeave(confirmApprove, adminPage)
           setConfirmApprove(null)
         }}
         onCancel={() => setConfirmApprove(null)}
@@ -256,7 +225,7 @@ export const LeavePage: React.FC = () => {
         confirmText="Reject"
         variant="danger"
         onConfirm={() => {
-          if (confirmReject) rejectLeave(confirmReject)
+          if (confirmReject) rejectLeave(confirmReject, adminPage)
           setConfirmReject(null)
         }}
         onCancel={() => setConfirmReject(null)}
@@ -276,9 +245,9 @@ export const LeavePage: React.FC = () => {
 
         <div className="mt-lg grid grid-cols-1 gap-md sm:grid-cols-3">
           {[
-            { label: 'Pending requests', value: leaveRequests.filter(r => r.status === 'pending').length, icon: CalendarDays, tone: 'text-primary-600' },
-            { label: 'Approved leaves', value: leaveSummary.approved, icon: CheckCircle2, tone: 'text-emerald-600' },
-            { label: 'Rejected leaves', value: leaveSummary.rejected, icon: AlertCircle, tone: 'text-rose-600' },
+            { label: 'Pending requests', value: stats?.pending || 0, icon: CalendarDays, tone: 'text-primary-600' },
+            { label: 'Approved leaves', value: stats?.approved || 0, icon: CheckCircle2, tone: 'text-emerald-600' },
+            { label: 'Rejected leaves', value: stats?.rejected || 0, icon: AlertCircle, tone: 'text-rose-600' },
           ].map(item => {
             const Icon = item.icon
             return (
@@ -307,12 +276,13 @@ export const LeavePage: React.FC = () => {
           </div>
 
           <div className="mt-md space-y-sm">
-            {leaveSummary.departments.map(([department, count]) => (
-              <div key={department} className="flex items-center justify-between rounded-2xl border border-border bg-background px-md py-sm">
-                <span className="text-sm font-semibold text-text-primary">{department}</span>
-                <span className="text-sm font-bold text-text-secondary">{count} leave days</span>
+            {stats?.departments?.map((dept: any) => (
+              <div key={dept.dept_name} className="flex items-center justify-between rounded-2xl border border-border bg-background px-md py-sm">
+                <span className="text-sm font-semibold text-text-primary">{dept.dept_name || 'Unassigned'}</span>
+                <span className="text-sm font-bold text-text-secondary">{dept.count} leave days</span>
               </div>
             ))}
+            {!stats?.departments?.length && <p className="text-sm text-text-secondary">No leave records by department.</p>}
           </div>
         </div>
 
@@ -326,7 +296,7 @@ export const LeavePage: React.FC = () => {
           </div>
 
           <div className="mt-md space-y-sm">
-            {leaveRequests.filter(r => r.status === 'pending').map(request => (
+            {pendingLeaves.map(request => (
               <div key={request.id} className="rounded-2xl border border-border bg-amber-50/50 p-md dark:bg-amber-950/20">
                 <div className="flex items-center justify-between gap-md">
                   <div>
@@ -348,7 +318,7 @@ export const LeavePage: React.FC = () => {
                 </div>
               </div>
             ))}
-            {leaveRequests.filter(r => r.status === 'pending').length === 0 && (
+            {!loading && pendingLeaves.length === 0 && (
               <div className="inline-flex items-center gap-xs px-md py-sm rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm font-semibold dark:bg-emerald-950/30 dark:border-emerald-900/50 dark:text-emerald-400">
                 <CheckCircle2 className="h-4 w-4" />
                 All caught up! Great work!
@@ -368,7 +338,7 @@ export const LeavePage: React.FC = () => {
         </div>
 
         <div className="mt-md grid grid-cols-1 gap-sm sm:grid-cols-2 xl:grid-cols-3">
-          {paginatedReviewedLeaves.map(request => (
+          {reviewedLeaves.map(request => (
             <div key={request.id} className="rounded-2xl border border-border bg-background p-md">
               <div className="flex items-center justify-between gap-md">
                 <div>
@@ -382,10 +352,10 @@ export const LeavePage: React.FC = () => {
               <p className="mt-sm text-sm text-text-secondary">{request.reason}</p>
             </div>
           ))}
-          {reviewedRequests.length === 0 && <p className="text-sm text-text-secondary col-span-full">No reviewed requests found.</p>}
+          {!loading && reviewedTotalCount === 0 && <p className="text-sm text-text-secondary col-span-full">No reviewed requests found.</p>}
         </div>
         
-        {reviewedRequests.length > 0 && (
+        {reviewedTotalCount > 0 && (
           <ModernPagination
             currentPage={adminPage}
             totalPages={totalAdminPages}
@@ -395,4 +365,4 @@ export const LeavePage: React.FC = () => {
       </div>
     </motion.div>
   )
-}
+}

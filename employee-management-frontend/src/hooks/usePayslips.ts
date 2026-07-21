@@ -1,34 +1,76 @@
-import { useState, useEffect, useCallback } from 'react';
-import { fetchPayslips, generatePayroll, approvePayslip } from '@/utils/api';
+import { useState, useCallback } from 'react';
+import apiClient from '@/utils/apiClient';
+import { generatePayroll, approvePayslip } from '@/utils/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function usePayslips() {
-  const [payslips, setPayslips] = useState<any[]>([]);
+  const { user } = useAuth();
+  const isEmployee = (user?.role ?? 'employee') === 'employee';
+
   const [loading, setLoading] = useState(true);
 
-  const loadPayslips = useCallback(() => {
-    setLoading(true);
-    fetchPayslips().then(res => {
-      setPayslips(res);
-      setLoading(false);
-    }).catch(err => {
-      console.error(err);
-      setLoading(false);
-    });
+  // Employee State
+  const [employeePayslips, setEmployeePayslips] = useState<any[]>([]);
+  const [employeeTotalCount, setEmployeeTotalCount] = useState(0);
+
+  // Admin State
+  const [adminPayslips, setAdminPayslips] = useState<any[]>([]);
+  const [adminTotalCount, setAdminTotalCount] = useState(0);
+
+  const [stats, setStats] = useState<any>(null);
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const { data } = await apiClient.get('/api/v1/payroll/payslips/stats/');
+      setStats(data);
+    } catch (e) {}
   }, []);
 
-  useEffect(() => {
-    loadPayslips();
-  }, [loadPayslips]);
+  const fetchEmployeePayslips = useCallback(async (page = 1, pageSize = 6) => {
+    try {
+      setLoading(true);
+      const { data } = await apiClient.get(`/api/v1/payroll/payslips/?page=${page}&page_size=${pageSize}`);
+      setEmployeePayslips(data.results || data);
+      setEmployeeTotalCount(data.count || (data.results || data).length);
+      await fetchStats();
+      setLoading(false);
+    } catch (err) {
+      console.error(err);
+      setLoading(false);
+    }
+  }, [fetchStats]);
 
-  const generate = async (month: number, year: number) => {
+  const fetchAdminPayslips = useCallback(async (page = 1, pageSize = 6) => {
+    try {
+      setLoading(true);
+      const { data } = await apiClient.get(`/api/v1/payroll/payslips/?page=${page}&page_size=${pageSize}`);
+      setAdminPayslips(data.results || data);
+      setAdminTotalCount(data.count || (data.results || data).length);
+      await fetchStats();
+      setLoading(false);
+    } catch (err) {
+      console.error(err);
+      setLoading(false);
+    }
+  }, [fetchStats]);
+
+  const generate = async (month: number, year: number, currentPage = 1) => {
     await generatePayroll(month, year);
-    loadPayslips();
+    if (isEmployee) await fetchEmployeePayslips(currentPage);
+    else await fetchAdminPayslips(currentPage);
   };
 
-  const approve = async (id: string) => {
+  const approve = async (id: string, currentPage = 1) => {
     await approvePayslip(id);
-    loadPayslips();
+    if (isEmployee) await fetchEmployeePayslips(currentPage);
+    else await fetchAdminPayslips(currentPage);
   };
 
-  return { payslips, loading, generate, approve, refresh: loadPayslips };
+  return {
+    employeePayslips, employeeTotalCount,
+    adminPayslips, adminTotalCount,
+    stats, loading,
+    fetchEmployeePayslips, fetchAdminPayslips,
+    generate, approve
+  };
 }

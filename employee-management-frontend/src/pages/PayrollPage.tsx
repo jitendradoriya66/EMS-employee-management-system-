@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight, DollarSign, FileText, TrendingUp, Users, Calendar, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -9,7 +9,17 @@ import { PayslipModal } from '@/components/payroll/PayslipModal'
 import { ModernPagination } from '@/components/common/ModernPagination'
 
 export const PayrollPage: React.FC = () => {
-  const { payslips, loading, generate, approve } = usePayslips();
+  const { user } = useAuth()
+  const isEmployee = (user?.role ?? 'employee') === 'employee'
+
+  const {
+    employeePayslips, employeeTotalCount,
+    adminPayslips, adminTotalCount,
+    stats, loading,
+    fetchEmployeePayslips, fetchAdminPayslips,
+    generate, approve
+  } = usePayslips();
+
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [isGenerating, setIsGenerating] = useState(false);
@@ -17,55 +27,26 @@ export const PayrollPage: React.FC = () => {
   // State for the modal
   const [selectedPayslip, setSelectedPayslip] = useState<any | null>(null);
 
-  const { user } = useAuth()
-  const isEmployee = (user?.role ?? 'employee') === 'employee'
-
-  const myPayslips = useMemo(() => {
-    if (!isEmployee || !user?.name) return payslips;
-    return payslips.filter(p => p.employeeName.toLowerCase() === user.name.toLowerCase());
-  }, [payslips, isEmployee, user?.name]);
-
-  const currentPayslip = useMemo(() => {
-    return myPayslips.length > 0 ? myPayslips[0] : null;
-  }, [myPayslips]);
-
   const [employeePage, setEmployeePage] = useState(1);
   const [adminPage, setAdminPage] = useState(1);
   const itemsPerPage = 6;
 
-  const paginatedMyPayslips = useMemo(() => {
-    const start = (employeePage - 1) * itemsPerPage;
-    return myPayslips.slice(start, start + itemsPerPage);
-  }, [employeePage, itemsPerPage, myPayslips]);
-
-  const totalMyPayslipsPages = Math.max(1, Math.ceil(myPayslips.length / itemsPerPage));
-
-  const paginatedPayslips = useMemo(() => {
-    const start = (adminPage - 1) * itemsPerPage;
-    return payslips.slice(start, start + itemsPerPage);
-  }, [adminPage, itemsPerPage, payslips]);
-
-  const totalPayslipsPages = Math.max(1, Math.ceil(payslips.length / itemsPerPage));
-
-  const payroll = useMemo(() => {
-    const byDepartment = payslips.reduce<Record<string, number>>((accumulator, slip) => {
-      const dept = slip.department || 'Unknown'
-      accumulator[dept] = (accumulator[dept] || 0) + (parseFloat(slip.gross_pay) || 0)
-      return accumulator
-    }, {})
-
-    const totalAnnual = payslips.reduce((total, slip) => total + (parseFloat(slip.gross_pay) || 0), 0)
-
-    return {
-      totalMonthly: totalAnnual / 12,
-      totalAnnual,
-      byDepartment: Object.entries(byDepartment)
-        .map(([department, value]) => ({ department, value }))
-        .sort((a, b) => b.value - a.value),
+  useEffect(() => {
+    if (isEmployee) {
+      fetchEmployeePayslips(employeePage, itemsPerPage);
+    } else {
+      fetchAdminPayslips(adminPage, itemsPerPage);
     }
-  }, [payslips])
+  }, [isEmployee, employeePage, adminPage, itemsPerPage, fetchEmployeePayslips, fetchAdminPayslips])
 
-  if (loading) return (
+  const currentPayslip = useMemo(() => {
+    return employeePayslips.length > 0 ? employeePayslips[0] : null;
+  }, [employeePayslips]);
+
+  const totalMyPayslipsPages = Math.max(1, Math.ceil(employeeTotalCount / itemsPerPage));
+  const totalPayslipsPages = Math.max(1, Math.ceil(adminTotalCount / itemsPerPage));
+
+  if (loading && !employeePayslips.length && !adminPayslips.length) return (
     <div className="flex h-64 items-center justify-center">
       <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
     </div>
@@ -135,13 +116,13 @@ export const PayrollPage: React.FC = () => {
           </div>
           
           <div className="space-y-sm text-sm">
-            {myPayslips.length === 0 ? (
+            {!loading && employeeTotalCount === 0 ? (
               <div className="py-xl text-center text-text-secondary flex flex-col items-center">
                 <FileText className="h-12 w-12 text-slate-300 dark:text-slate-700 mb-4" />
                 <p>No payslips have been generated for you yet.</p>
               </div>
             ) : (
-              paginatedMyPayslips.map(slip => (
+              employeePayslips.map(slip => (
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -187,7 +168,7 @@ export const PayrollPage: React.FC = () => {
             )}
           </div>
           
-          {myPayslips.length > 0 && (
+          {employeeTotalCount > 0 && (
             <div className="mt-md">
               <ModernPagination
                 currentPage={employeePage}
@@ -230,9 +211,9 @@ export const PayrollPage: React.FC = () => {
 
         <div className="mt-xl grid grid-cols-1 gap-md md:grid-cols-3">
           {[
-            { label: 'Total Payroll (Current)', value: formatCurrency(payroll.totalMonthly), icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-100 dark:bg-emerald-900/30' },
-            { label: 'Annual Projection', value: formatCurrency(payroll.totalAnnual), icon: TrendingUp, color: 'text-primary-600', bg: 'bg-primary-100 dark:bg-primary-900/30' },
-            { label: 'Active Payees', value: payslips.length, icon: Users, color: 'text-purple-600', bg: 'bg-purple-100 dark:bg-purple-900/30' },
+            { label: 'Total Payroll (Current)', value: formatCurrency(stats?.total_monthly || 0), icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-100 dark:bg-emerald-900/30' },
+            { label: 'Annual Projection', value: formatCurrency(stats?.total_gross || 0), icon: TrendingUp, color: 'text-primary-600', bg: 'bg-primary-100 dark:bg-primary-900/30' },
+            { label: 'Active Payees', value: adminTotalCount, icon: Users, color: 'text-purple-600', bg: 'bg-purple-100 dark:bg-purple-900/30' },
           ].map(item => {
             const Icon = item.icon
             return (
@@ -287,7 +268,7 @@ export const PayrollPage: React.FC = () => {
                 onClick={async () => {
                   setIsGenerating(true);
                   try {
-                    await generate(selectedMonth, selectedYear);
+                    await generate(selectedMonth, selectedYear, adminPage);
                   } finally {
                     setIsGenerating(false);
                   }
@@ -316,7 +297,7 @@ export const PayrollPage: React.FC = () => {
             </div>
 
             <div className="mt-md">
-              {payslips.length === 0 ? (
+              {!loading && adminTotalCount === 0 ? (
                 <div className="py-24 text-center flex flex-col items-center">
                   <div className="h-16 w-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
                     <FileText className="h-8 w-8 text-slate-400" />
@@ -338,7 +319,7 @@ export const PayrollPage: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {paginatedPayslips.map(slip => (
+                      {adminPayslips.map(slip => (
                         <tr key={slip.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                           <td className="px-4 py-4 font-bold text-text-primary">{slip.employeeName}</td>
                           <td className="px-4 py-4 text-text-secondary">{slip.period_start} <span className="text-slate-400">to</span> {slip.period_end}</td>
@@ -364,7 +345,7 @@ export const PayrollPage: React.FC = () => {
                               </button>
                               {slip.status === 'draft' && (
                                 <button 
-                                  onClick={() => approve(slip.id)}
+                                  onClick={() => approve(slip.id, adminPage)}
                                   className="inline-flex items-center gap-1 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-primary-700"
                                 >
                                   Approve
@@ -380,7 +361,7 @@ export const PayrollPage: React.FC = () => {
               )}
             </div>
             
-            {payslips.length > 0 && (
+            {adminTotalCount > 0 && (
               <div className="mt-md">
                 <ModernPagination
                   currentPage={adminPage}
@@ -395,3 +376,4 @@ export const PayrollPage: React.FC = () => {
     </motion.div>
   )
 }
+

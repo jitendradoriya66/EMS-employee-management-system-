@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { useAttendance } from '@/hooks/useAttendance'
 import { useAuth } from '@/contexts/AuthContext'
 import { ModernPagination } from '@/components/common/ModernPagination'
+import { useDebounce } from '@/hooks'
 
 type AttendanceStatus = 'present' | 'late' | 'leave'
 
@@ -35,13 +36,22 @@ const LiveClock: React.FC = () => {
 
 export const AttendancePage: React.FC = () => {
   const { user } = useAuth()
-  const { records, checkIn, checkOut } = useAttendance()
-  const isEmployee = (user?.role ?? 'employee') === 'employee'
   const [departmentFilter, setDepartmentFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<'all' | AttendanceStatus>('all')
   const [search, setSearch] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(8)
+  const debouncedSearch = useDebounce(search, 300)
+
+  const { records, totalCount, stats: backendStats, loading, checkIn, checkOut } = useAttendance(
+    currentPage,
+    itemsPerPage,
+    debouncedSearch,
+    departmentFilter,
+    statusFilter
+  )
+
+  const isEmployee = (user?.role ?? 'employee') === 'employee'
   const [actionError, setActionError] = useState<string | null>(null)
   
   const handleCheckIn = async () => {
@@ -62,27 +72,13 @@ export const AttendancePage: React.FC = () => {
     }
   }
 
-  const departments = useMemo(() => ['all', ...new Set(records.map(record => record.department))], [records])
-
-  const filteredRecords = useMemo(() => {
-    let baseRecords = records;
-    if (isEmployee && user?.name) {
-      baseRecords = records.filter(r => r.employeeName.toLowerCase() === user.name.toLowerCase());
-    }
-
-    return baseRecords
-      .filter(record => departmentFilter === 'all' || record.department === departmentFilter)
-      .filter(record => statusFilter === 'all' || record.status === statusFilter)
-      .filter(record => {
-        if (!search.trim()) return true
-        const query = search.toLowerCase()
-        return record.employeeName.toLowerCase().includes(query) || record.department.toLowerCase().includes(query)
-      })
-      .sort((a, b) => b.date.localeCompare(a.date))
-  }, [departmentFilter, records, search, statusFilter, isEmployee, user?.name])
+  const departments = useMemo(() => {
+    // Ideally fetched from backend, but fallback to records if backend departments absent
+    return ['all', ...new Set(records.map(record => record.department))]
+  }, [records])
 
   const today = new Date().toISOString().split('T')[0]
-  const todaysRecords = filteredRecords.filter(r => r.date === today)
+  const todaysRecords = records.filter(r => r.date === today)
   
   const leaveRecord = todaysRecords.find(r => r.status === 'leave')
   const isOnLeaveToday = !!leaveRecord
@@ -94,23 +90,25 @@ export const AttendancePage: React.FC = () => {
   const hasCompletedSession = todaysRecords.some(r => r.status !== 'leave' && r.checkIn && r.checkOut)
   const isShiftComplete = !hasCheckedIn && hasCompletedSession && !isOnLeaveToday
 
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredRecords.length / itemsPerPage)), [filteredRecords.length, itemsPerPage])
-
-  const paginatedRecords = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage
-    return filteredRecords.slice(start, start + itemsPerPage)
-  }, [currentPage, filteredRecords, itemsPerPage])
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / itemsPerPage)), [totalCount, itemsPerPage])
 
   useEffect(() => {
     setCurrentPage(prev => Math.min(prev, totalPages))
   }, [totalPages])
 
   const stats = useMemo(() => {
-    const total = filteredRecords.length
-    const present = filteredRecords.filter(record => record.status === 'present').length
-    const late = filteredRecords.filter(record => record.status === 'late').length
-    const leave = filteredRecords.filter(record => record.status === 'leave').length
-    const averageHours = total > 0 ? filteredRecords.reduce((sum, record) => sum + record.hoursWorked, 0) / total : 0
+    if (!backendStats) return [
+      { label: 'Attendance Rate', value: '0%', icon: CalendarCheck2, tone: 'text-green-600' },
+      { label: 'Late Check-ins', value: 0, icon: Clock3, tone: 'text-yellow-600' },
+      { label: 'Approved Leave', value: 0, icon: CalendarX2, tone: 'text-red-600' },
+      { label: 'Avg. Hours', value: '0.0', icon: TrendingUp, tone: 'text-primary' },
+    ]
+
+    const total = backendStats.total
+    const present = backendStats.present
+    const late = backendStats.late
+    const leave = backendStats.leave
+    const averageHours = backendStats.average_hours
 
     return [
       { label: 'Attendance Rate', value: total > 0 ? `${Math.round((present / total) * 100)}%` : '0%', icon: CalendarCheck2, tone: 'text-green-600' },
@@ -118,28 +116,18 @@ export const AttendancePage: React.FC = () => {
       { label: 'Approved Leave', value: leave, icon: CalendarX2, tone: 'text-red-600' },
       { label: 'Avg. Hours', value: averageHours.toFixed(1), icon: TrendingUp, tone: 'text-primary' },
     ]
-  }, [filteredRecords])
+  }, [backendStats])
 
   const dailySummary = useMemo(() => {
-    const byDate = filteredRecords.reduce<Record<string, { present: number; late: number; leave: number }>>((acc, record) => {
-      if (!acc[record.date]) {
-        acc[record.date] = { present: 0, late: 0, leave: 0 }
-      }
-
-      acc[record.date][record.status] += 1
-      return acc
-    }, {})
-
-    // Ensure today's date always exists in the summary
-    const today = new Date().toISOString().split('T')[0]
-    if (!byDate[today]) {
-      byDate[today] = { present: 0, late: 0, leave: 0 }
-    }
-
-    return Object.entries(byDate)
-      .map(([date, counts]) => ({ date, total: counts.present + counts.late + counts.leave, ...counts }))
-      .sort((a, b) => a.date.localeCompare(b.date))
-  }, [filteredRecords])
+    if (!backendStats) return []
+    return backendStats.daily_summary.map((day: any) => ({
+      date: day.date,
+      total: day.present + day.late + day.leave,
+      present: day.present,
+      late: day.late,
+      leave: day.leave
+    }))
+  }, [backendStats])
 
   return (
     <motion.div className="space-y-lg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
@@ -284,7 +272,7 @@ export const AttendancePage: React.FC = () => {
               <h2 className="section-title text-base sm:text-lg">Daily Summary</h2>
               <p className="text-xs text-text-secondary mt-xs">A quick overview of attendance balance by day.</p>
             </div>
-            <span className="text-xs font-semibold text-text-secondary">{records.length} total log entries</span>
+            <span className="text-xs font-semibold text-text-secondary">{backendStats?.total || 0} total log entries</span>
           </div>
 
           <div className="space-y-sm">
@@ -334,7 +322,7 @@ export const AttendancePage: React.FC = () => {
       <div className="card p-lg space-y-lg">
         <div>
           <h2 className="section-title text-base sm:text-lg">Recent Attendance Records</h2>
-          <p className="text-xs text-text-secondary mt-xs">Showing {paginatedRecords.length} of {filteredRecords.length} matching records.</p>
+          <p className="text-xs text-text-secondary mt-xs">Showing {records.length} of {totalCount} matching records.</p>
         </div>
 
         <div className="overflow-x-auto">
@@ -351,7 +339,7 @@ export const AttendancePage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {paginatedRecords.map(record => (
+              {records.map(record => (
                 <tr key={`${record.employeeId}-${record.date}`} className="border-b border-border hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                   <td className="py-md px-md font-semibold text-text-primary">{record.employeeName}</td>
                   <td className="py-md px-md text-text-secondary">{record.department}</td>
@@ -366,7 +354,7 @@ export const AttendancePage: React.FC = () => {
                   </td>
                 </tr>
               ))}
-              {filteredRecords.length === 0 && (
+              {totalCount === 0 && !loading && (
                 <tr>
                   <td colSpan={7} className="py-xl text-center text-text-secondary">No attendance records match the current filters.</td>
                 </tr>
@@ -375,7 +363,7 @@ export const AttendancePage: React.FC = () => {
           </table>
         </div>
 
-        {filteredRecords.length > 0 && (
+        {totalCount > 0 && (
           <ModernPagination
             currentPage={currentPage}
             totalPages={totalPages}

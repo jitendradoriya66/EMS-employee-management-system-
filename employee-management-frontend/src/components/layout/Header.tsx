@@ -206,13 +206,15 @@ export const Header: React.FC<HeaderProps> = ({
                       <Settings className="h-4 w-4" />
                       Settings
                     </button>
-                    <button
-                      onClick={() => handleProfileClick('logout')}
-                      className="mt-sm w-full flex items-center gap-md border-t border-border px-md py-sm text-left text-sm text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-950/30"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      Sign Out
-                    </button>
+                    <div className="mt-sm pt-sm border-t border-border">
+                      <button
+                        onClick={() => handleProfileClick('logout')}
+                        className="w-full flex items-center gap-md rounded-2xl px-md py-sm text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Sign Out
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

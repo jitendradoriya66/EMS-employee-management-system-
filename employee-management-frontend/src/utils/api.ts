@@ -24,62 +24,44 @@ export const mapBackendEmployeeToFrontend = (backendEmp: any): Employee => {
 export const fetchEmployees = async (
   filters?: any,
   pagination?: any
-): Promise<{ employees: Employee[]; total: number }> => {
+): Promise<{ employees: Employee[]; total: number; stats?: any }> => {
   try {
-    const response = await apiClient.get('/api/v1/employees/');
-    const allEmployees = response.data.results || response.data;
-    let result = (Array.isArray(allEmployees) ? allEmployees : []).map(mapBackendEmployeeToFrontend);
-
-    if (filters?.search) {
-      const search = filters.search.toLowerCase()
-      result = result.filter(
-        emp =>
-          emp.firstName.toLowerCase().includes(search) ||
-          emp.lastName.toLowerCase().includes(search) ||
-          emp.email.toLowerCase().includes(search) ||
-          emp.id.toLowerCase().includes(search) ||
-          emp.department.toLowerCase().includes(search) ||
-          emp.position.toLowerCase().includes(search)
-      )
+    const params = new URLSearchParams()
+    
+    if (pagination) {
+      params.append('page', pagination.page.toString())
+      params.append('page_size', pagination.limit.toString())
     }
 
-    if (filters?.department && filters.department !== 'all') {
-      result = result.filter(emp => emp.department === filters.department)
+    if (filters) {
+      if (filters.search) params.append('search', filters.search)
+      if (filters.department && filters.department !== 'all') params.append('department__name', filters.department)
+      if (filters.status && filters.status !== 'all') params.append('status', filters.status)
+      if (filters.sortBy) {
+        let sortField = filters.sortBy
+        if (sortField === 'name') sortField = 'firstName'
+        if (filters.sortOrder === 'desc') sortField = `-${sortField}`
+        params.append('ordering', sortField)
+      }
     }
 
-    if (filters?.status && filters.status !== 'all') {
-      result = result.filter(emp => emp.status === filters.status)
+    const [empRes, statsRes] = await Promise.all([
+      apiClient.get(`/api/v1/employees/?${params.toString()}`),
+      apiClient.get(`/api/v1/employees/stats/?${params.toString()}`)
+    ])
+
+    const allEmployees = empRes.data.results || empRes.data
+    const total = empRes.data.count || allEmployees.length
+    const employees = (Array.isArray(allEmployees) ? allEmployees : []).map(mapBackendEmployeeToFrontend)
+    
+    return {
+      employees,
+      total,
+      stats: statsRes.data
     }
-
-    if (filters?.sortBy) {
-      const sortOrder = filters.sortOrder === 'asc' ? 1 : -1
-      result.sort((a, b) => {
-        let aVal: any = a[filters.sortBy as keyof Employee] || ''
-        let bVal: any = b[filters.sortBy as keyof Employee] || ''
-        
-        if (filters.sortBy === 'name') {
-          aVal = `${a.firstName} ${a.lastName}`
-          bVal = `${b.firstName} ${b.lastName}`
-        } else if (filters.sortBy === 'date') {
-          aVal = a.startDate
-          bVal = b.startDate
-        }
-        
-        if (typeof aVal === 'string') {
-          return aVal.localeCompare(bVal) * sortOrder
-        }
-        return (aVal - bVal) * sortOrder
-      })
-    }
-
-    const total = result.length
-    const start = ((pagination?.page || 1) - 1) * (pagination?.limit || 10)
-    const paginated = result.slice(start, start + (pagination?.limit || 10))
-
-    return { employees: paginated, total }
   } catch (error) {
-    console.error('Error fetching employees:', error);
-    return { employees: [], total: 0 }
+    console.error('Error fetching employees:', error)
+    throw error
   }
 }
 
