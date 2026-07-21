@@ -43,10 +43,13 @@ export const AttendancePage: React.FC = () => {
   const [itemsPerPage, setItemsPerPage] = useState(8)
 
   const today = new Date().toISOString().split('T')[0]
-  const todaysRecord = records.find(r => r.date === today && (isEmployee ? r.employeeId === user?.id : true))
-  const hasCheckedIn = !!todaysRecord?.checkIn
-  const hasCheckedOut = !!todaysRecord?.checkOut
-  const isShiftComplete = hasCheckedIn && hasCheckedOut
+  // Find if there is a currently active check-in (no check out yet)
+  const activeRecord = records.find(r => r.date === today && (isEmployee ? r.employeeId === user?.id : true) && !r.checkOut)
+  const todaysRecords = records.filter(r => r.date === today && (isEmployee ? r.employeeId === user?.id : true))
+  
+  const hasCheckedIn = !!activeRecord // True if currently in a session
+  const hasCompletedSession = todaysRecords.some(r => r.checkIn && r.checkOut)
+  const isShiftComplete = !hasCheckedIn && hasCompletedSession
 
   const departments = useMemo(() => ['all', ...new Set(records.map(record => record.department))], [records])
 
@@ -102,6 +105,12 @@ export const AttendancePage: React.FC = () => {
       acc[record.date][record.status] += 1
       return acc
     }, {})
+
+    // Ensure today's date always exists in the summary
+    const today = new Date().toISOString().split('T')[0]
+    if (!byDate[today]) {
+      byDate[today] = { present: 0, late: 0, leave: 0 }
+    }
 
     return Object.entries(byDate)
       .map(([date, counts]) => ({ date, total: counts.present + counts.late + counts.leave, ...counts }))
@@ -184,14 +193,14 @@ export const AttendancePage: React.FC = () => {
                 </button>
                 <button 
                   onClick={checkOut} 
-                  disabled={!hasCheckedIn || hasCheckedOut}
+                  disabled={!hasCheckedIn}
                   className={`w-full sm:w-auto min-w-[140px] px-xl py-lg rounded-2xl font-bold tracking-wide shadow-sm transition-all active:scale-95 ${
-                    !hasCheckedIn || hasCheckedOut 
+                    !hasCheckedIn
                       ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-500' 
                       : 'bg-white border-2 border-primary-600 text-primary-600 hover:bg-primary-50 dark:bg-slate-900 dark:hover:bg-slate-800'
                   }`}
                 >
-                  {hasCheckedOut ? 'Checked Out' : 'Check Out'}
+                  Check Out
                 </button>
               </div>
 

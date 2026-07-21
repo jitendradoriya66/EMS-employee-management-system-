@@ -25,10 +25,10 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             employee = user.employee_profile
             date_val = serializer.validated_data.get('date')
             
-            # Prevent duplicate check-in
-            if Attendance.objects.filter(employee=employee, date=date_val).exists():
+            # Prevent check-in if there is an active check-in (no check-out) for today
+            if Attendance.objects.filter(employee=employee, date=date_val, check_out_time__isnull=True).exists():
                 from rest_framework.exceptions import ValidationError
-                raise ValidationError("Attendance record already exists for this date.")
+                raise ValidationError("You are already checked in. Please check out first.")
                 
             instance = serializer.save(employee=employee)
             self.broadcast_attendance_update(instance, "check-in")

@@ -108,8 +108,9 @@ export const useAttendance = () => {
         hoursWorked: 0,
       })
       await fetchRecords()
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
+      alert(err.response?.data?.detail || err.response?.data?.[0] || 'Failed to check in. Please try again.')
     }
   }
 
@@ -119,7 +120,7 @@ export const useAttendance = () => {
       const activeRecord = records.find(r => r.date === today && !r.checkOut)
       
       if (!activeRecord) {
-        console.warn('No active check-in found for today')
+        alert('No active check-in found for today')
         return
       }
 
@@ -136,8 +137,9 @@ export const useAttendance = () => {
       })
       
       await fetchRecords()
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
+      alert(err.response?.data?.detail || err.response?.data?.[0] || 'Failed to check out. Please try again.')
     }
   }
 

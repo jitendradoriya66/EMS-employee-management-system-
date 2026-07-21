@@ -3,9 +3,9 @@ from apps.attendance.models import Attendance
 from apps.employees.models import Employee
 
 class AttendanceEmployeeSerializer(serializers.ModelSerializer):
-    firstName = serializers.CharField(source='first_name', read_only=True)
-    lastName = serializers.CharField(source='last_name', read_only=True)
-    department = serializers.CharField(source='department_name', read_only=True)
+    firstName = serializers.CharField(source='user.first_name', read_only=True)
+    lastName = serializers.CharField(source='user.last_name', read_only=True)
+    department = serializers.CharField(source='department.name', read_only=True)
 
     class Meta:
         model = Employee
