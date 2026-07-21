@@ -110,7 +110,7 @@ export const useAttendance = () => {
       await fetchRecords()
     } catch (err: any) {
       console.error(err)
-      alert(err.response?.data?.detail || err.response?.data?.[0] || 'Failed to check in. Please try again.')
+      throw new Error(err.response?.data?.detail || err.response?.data?.[0] || 'Failed to check in. Please try again.')
     }
   }
 
@@ -120,8 +120,7 @@ export const useAttendance = () => {
       const activeRecord = records.find(r => r.date === today && !r.checkOut)
       
       if (!activeRecord) {
-        alert('No active check-in found for today')
-        return
+        throw new Error('No active check-in found for today')
       }
 
       const time = new Date().toTimeString().split(' ')[0].substring(0, 5) // HH:MM
@@ -139,7 +138,7 @@ export const useAttendance = () => {
       await fetchRecords()
     } catch (err: any) {
       console.error(err)
-      alert(err.response?.data?.detail || err.response?.data?.[0] || 'Failed to check out. Please try again.')
+      throw new Error(err.response?.data?.detail || err.response?.data?.[0] || err.message || 'Failed to check out. Please try again.')
     }
   }
 

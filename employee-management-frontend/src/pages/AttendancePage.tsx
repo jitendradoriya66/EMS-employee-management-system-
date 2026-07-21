@@ -41,6 +41,25 @@ export const AttendancePage: React.FC = () => {
   const [search, setSearch] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(8)
+  const [actionError, setActionError] = useState<string | null>(null)
+  
+  const handleCheckIn = async () => {
+    try {
+      setActionError(null)
+      await checkIn()
+    } catch (e: any) {
+      setActionError(e.message)
+    }
+  }
+
+  const handleCheckOut = async () => {
+    try {
+      setActionError(null)
+      await checkOut()
+    } catch (e: any) {
+      setActionError(e.message)
+    }
+  }
 
   const today = new Date().toISOString().split('T')[0]
   // Find if there is a currently active check-in (no check out yet)
@@ -173,6 +192,16 @@ export const AttendancePage: React.FC = () => {
 
       {isEmployee && (
         <div className="rounded-3xl border border-border bg-card p-xl shadow-sm relative overflow-hidden">
+          {actionError && (
+            <div className="absolute top-md left-md right-md z-50">
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 p-md text-sm text-rose-800 shadow-lg dark:border-rose-900/40 dark:bg-rose-950/90 dark:text-rose-200 flex justify-between items-center backdrop-blur-sm">
+                <span>{actionError}</span>
+                <button onClick={() => setActionError(null)} className="p-1 hover:bg-rose-100 dark:hover:bg-rose-900/50 rounded-full">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+              </div>
+            </div>
+          )}
           {/* Subtle background decoration */}
           <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-primary-500/5 blur-3xl pointer-events-none" />
           
@@ -184,24 +213,22 @@ export const AttendancePage: React.FC = () => {
               </p>
               
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-md pt-sm">
-                <button 
-                  onClick={checkIn} 
-                  disabled={hasCheckedIn}
-                  className="w-full sm:w-auto min-w-[140px] px-xl py-lg rounded-2xl bg-primary-600 hover:bg-primary-700 text-white font-bold tracking-wide shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
-                >
-                  {hasCheckedIn ? 'Checked In' : 'Check In'}
-                </button>
-                <button 
-                  onClick={checkOut} 
-                  disabled={!hasCheckedIn}
-                  className={`w-full sm:w-auto min-w-[140px] px-xl py-lg rounded-2xl font-bold tracking-wide shadow-sm transition-all active:scale-95 ${
-                    !hasCheckedIn
-                      ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-500' 
-                      : 'bg-white border-2 border-primary-600 text-primary-600 hover:bg-primary-50 dark:bg-slate-900 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  Check Out
-                </button>
+                {!hasCheckedIn && !isShiftComplete && (
+                  <button 
+                    onClick={handleCheckIn} 
+                    className="w-full sm:w-auto min-w-[140px] px-xl py-lg rounded-2xl bg-primary-600 hover:bg-primary-700 text-white font-bold tracking-wide shadow-md hover:shadow-lg transition-all active:scale-95"
+                  >
+                    Check In
+                  </button>
+                )}
+                {hasCheckedIn && (
+                  <button 
+                    onClick={handleCheckOut} 
+                    className="w-full sm:w-auto min-w-[140px] px-xl py-lg rounded-2xl font-bold tracking-wide shadow-sm transition-all active:scale-95 bg-white border-2 border-primary-600 text-primary-600 hover:bg-primary-50 dark:bg-slate-900 dark:hover:bg-slate-800"
+                  >
+                    Check Out
+                  </button>
+                )}
               </div>
 
               {isShiftComplete && (

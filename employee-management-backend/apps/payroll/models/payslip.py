@@ -13,6 +13,7 @@ class Payslip(models.Model):
     period_end = models.DateField()
     gross_pay = models.DecimalField(max_digits=12, decimal_places=2)
     net_pay = models.DecimalField(max_digits=12, decimal_places=2)
+    details = models.JSONField(default=dict, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     issued_date = models.DateTimeField(auto_now_add=True)
 

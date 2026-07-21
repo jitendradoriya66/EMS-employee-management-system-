@@ -7,7 +7,7 @@ class PayslipSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Payslip
-        fields = ("id", "employee", "employeeName", "department", "period_start", "period_end", "gross_pay", "net_pay", "status", "issued_date")
+        fields = ("id", "employee", "employeeName", "department", "period_start", "period_end", "gross_pay", "net_pay", "details", "status", "issued_date")
         read_only_fields = fields
 
     def get_employeeName(self, obj):
