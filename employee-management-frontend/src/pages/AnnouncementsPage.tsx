@@ -166,7 +166,7 @@ export const AnnouncementsPage: React.FC = () => {
                       </span>
                     )}
                     <span className="text-xs font-semibold uppercase tracking-[0.2em] text-text-secondary">Update</span>
-                    <span className="text-xs text-text-secondary">• {formatDistanceToNow(new Date(item.date), { addSuffix: true })}</span>
+                    <span className="text-xs text-text-secondary">• {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}</span>
                   </div>
                   <h2 className="text-xl font-bold text-text-primary">{item.title}</h2>
                   <p className="text-sm leading-relaxed text-text-secondary whitespace-pre-wrap">{item.body}</p>

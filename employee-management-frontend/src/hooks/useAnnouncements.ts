@@ -7,6 +7,7 @@ export interface Announcement {
   category: string
   audience: string
   date: string
+  timestamp: string
   status: string
   body: string
 }
@@ -26,6 +27,7 @@ export const useAnnouncements = () => {
         category: item.type || 'Company Update',
         audience: 'All Employees',
         date: item.created_at ? new Date(item.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
+        timestamp: item.created_at || new Date().toISOString(),
         status: item.is_read ? 'Read' : 'New',
         body: item.message || '',
       })) : [])

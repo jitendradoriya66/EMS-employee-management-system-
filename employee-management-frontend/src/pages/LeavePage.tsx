@@ -348,7 +348,12 @@ export const LeavePage: React.FC = () => {
                 </div>
               </div>
             ))}
-            {leaveRequests.filter(r => r.status === 'pending').length === 0 && <p className="text-sm text-text-secondary">No pending leave requests.</p>}
+            {leaveRequests.filter(r => r.status === 'pending').length === 0 && (
+              <div className="inline-flex items-center gap-xs px-md py-sm rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm font-semibold dark:bg-emerald-950/30 dark:border-emerald-900/50 dark:text-emerald-400">
+                <CheckCircle2 className="h-4 w-4" />
+                All caught up! Great work!
+              </div>
+            )}
           </div>
         </div>
       </div>

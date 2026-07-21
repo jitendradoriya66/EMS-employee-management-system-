@@ -83,11 +83,16 @@ export const AttendancePage: React.FC = () => {
 
   const today = new Date().toISOString().split('T')[0]
   const todaysRecords = filteredRecords.filter(r => r.date === today)
-  const activeRecord = todaysRecords.find(r => !r.checkOut)
+  
+  const leaveRecord = todaysRecords.find(r => r.status === 'leave')
+  const isOnLeaveToday = !!leaveRecord
+
+  // We should only consider present/late records for checkIn/checkOut active states
+  const activeRecord = todaysRecords.find(r => r.status !== 'leave' && !r.checkOut)
   
   const hasCheckedIn = !!activeRecord // True if currently in a session
-  const hasCompletedSession = todaysRecords.some(r => r.checkIn && r.checkOut)
-  const isShiftComplete = !hasCheckedIn && hasCompletedSession
+  const hasCompletedSession = todaysRecords.some(r => r.status !== 'leave' && r.checkIn && r.checkOut)
+  const isShiftComplete = !hasCheckedIn && hasCompletedSession && !isOnLeaveToday
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredRecords.length / itemsPerPage)), [filteredRecords.length, itemsPerPage])
 
@@ -213,7 +218,7 @@ export const AttendancePage: React.FC = () => {
               </p>
               
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-md pt-sm">
-                {!hasCheckedIn && !isShiftComplete && (
+                {!hasCheckedIn && !isShiftComplete && !isOnLeaveToday && (
                   <button 
                     onClick={handleCheckIn} 
                     className="w-full sm:w-auto min-w-[140px] px-xl py-lg rounded-2xl bg-primary-600 hover:bg-primary-700 text-white font-bold tracking-wide shadow-md hover:shadow-lg transition-all active:scale-95"
@@ -221,7 +226,7 @@ export const AttendancePage: React.FC = () => {
                     Check In
                   </button>
                 )}
-                {hasCheckedIn && (
+                {hasCheckedIn && !isOnLeaveToday && (
                   <button 
                     onClick={handleCheckOut} 
                     className="w-full sm:w-auto min-w-[140px] px-xl py-lg rounded-2xl font-bold tracking-wide shadow-sm transition-all active:scale-95 bg-white border-2 border-primary-600 text-primary-600 hover:bg-primary-50 dark:bg-slate-900 dark:hover:bg-slate-800"
@@ -231,10 +236,17 @@ export const AttendancePage: React.FC = () => {
                 )}
               </div>
 
-              {isShiftComplete && (
+              {isShiftComplete && !isOnLeaveToday && (
                 <div className="inline-flex items-center gap-xs px-md py-sm rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm font-semibold dark:bg-emerald-950/30 dark:border-emerald-900/50 dark:text-emerald-400">
                   <CalendarCheck2 className="h-4 w-4" />
                   Your shift is complete for today. Great work!
+                </div>
+              )}
+
+              {isOnLeaveToday && (
+                <div className="inline-flex items-center gap-xs px-md py-sm rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-sm font-semibold dark:bg-amber-950/30 dark:border-amber-900/50 dark:text-amber-400">
+                  <CalendarX2 className="h-4 w-4" />
+                  You are on leave today. Enjoy your time off!
                 </div>
               )}
             </div>
@@ -364,29 +376,17 @@ export const AttendancePage: React.FC = () => {
         </div>
 
         {filteredRecords.length > 0 && (
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-md pt-md border-t border-border">
-            <div className="flex items-center gap-sm text-sm text-text-secondary">
-              <span>Rows per page</span>
-              <select
-                value={itemsPerPage}
-                onChange={(e) => {
-                  setItemsPerPage(Number(e.target.value))
-                  setCurrentPage(1)
-                }}
-                className="theme-select text-sm"
-              >
-                {[6, 8, 12, 16].map(size => (
-                  <option key={size} value={size}>{size}</option>
-                ))}
-              </select>
-            </div>
-
-            <ModernPagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          </div>
+          <ModernPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={itemsPerPage}
+            onItemsPerPageChange={(size) => {
+              setItemsPerPage(size)
+              setCurrentPage(1)
+            }}
+            itemsPerPageOptions={[6, 8, 12, 16]}
+          />
         )}
       </div>
     </motion.div>
