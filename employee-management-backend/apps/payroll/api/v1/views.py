@@ -13,6 +13,7 @@ class PayslipViewSet(viewsets.ModelViewSet):
     """
     serializer_class = PayslipSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None
 
     def get_queryset(self):
         user = self.request.user

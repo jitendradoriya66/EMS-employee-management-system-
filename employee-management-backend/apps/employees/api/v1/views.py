@@ -14,6 +14,7 @@ class EmployeeListAPIView(generics.ListAPIView):
     queryset = Employee.objects.select_related('user', 'department', 'manager__user').all()
     serializer_class = EmployeeListSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None
 
 class EmployeeCreateAPIView(generics.CreateAPIView):
     """
