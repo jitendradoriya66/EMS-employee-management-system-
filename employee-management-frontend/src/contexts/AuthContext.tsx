@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import type { UserAccount, UserRole } from '@/types'
 import apiClient from '@/utils/apiClient'
-import { jwtDecode } from 'jwt-decode'
 
 interface AuthContextType {
   isAuthenticated: boolean
@@ -25,11 +24,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 const SESSION_STORAGE_KEY = 'rbac-session'
-
-interface DecodedToken {
-  user_id: number;
-  exp: number;
-}
 
 // Helper to map backend User to frontend UserAccount
 export const mapBackendUserToAccount = (backendUser: any): UserAccount => {
@@ -68,12 +62,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchCurrentUser = async (token: string, storage: Storage = localStorage): Promise<UserAccount | null> => {
     try {
-      const decoded = jwtDecode<DecodedToken>(token);
-      const userId = decoded.user_id;
-      
-      const backendUsers = await fetchUsers();
-      
-      const currentUser = backendUsers.find((u: any) => u.id === userId);
+      apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      const response = await apiClient.get('/api/v1/users/me/');
+      const currentUser = response.data;
       
       if (currentUser) {
         const mappedUser = mapBackendUserToAccount(currentUser);
@@ -83,7 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         return mappedUser;
       } else {
-        throw new Error('User not found in list');
+        throw new Error('User not found');
       }
     } catch (error) {
       console.error('Error fetching current user:', error);
