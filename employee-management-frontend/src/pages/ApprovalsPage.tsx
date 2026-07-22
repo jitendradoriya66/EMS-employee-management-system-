@@ -73,15 +73,39 @@ export const ApprovalsPage: React.FC = () => {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-lg">
       {confirmApprove && (
-        <ConfirmDialog
-          isOpen={true}
-          title="Approve User Registration"
-          message={`Are you sure you want to approve ${confirmApprove.name} as ${roleLabels[roleSelection[confirmApprove.id] || 'employee']}? They will gain access to the system.`}
-          confirmText="Approve"
-          variant="info"
-          onConfirm={() => approve(confirmApprove)}
-          onCancel={() => setConfirmApprove(null)}
-        />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setConfirmApprove(null)} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="relative w-full max-w-md overflow-hidden rounded-[2rem] bg-card p-xl shadow-2xl border border-border space-y-lg text-left"
+          >
+            <div>
+              <h2 className="text-xl font-bold text-text-primary">Assign Role & Approve</h2>
+              <p className="mt-sm text-sm text-text-secondary">
+                Please select a role for <strong>{confirmApprove.name}</strong> to finalize their registration approval.
+              </p>
+            </div>
+            
+            <div className="mt-md">
+              <Select
+                label="Role Assignment"
+                value={roleSelection[confirmApprove.id] || 'employee'}
+                onChange={event => setRoleSelection(previous => ({ ...previous, [confirmApprove.id]: event.target.value as UserRole }))}
+                options={roleSelectOptions}
+              />
+            </div>
+
+            <div className="flex gap-sm pt-sm">
+              <Button variant="secondary" className="flex-1" onClick={() => setConfirmApprove(null)}>
+                Cancel
+              </Button>
+              <Button variant="primary" className="flex-1" onClick={() => approve(confirmApprove)}>
+                Approve User
+              </Button>
+            </div>
+          </motion.div>
+        </div>
       )}
       
       {confirmReject && (
@@ -168,14 +192,7 @@ export const ApprovalsPage: React.FC = () => {
                     <p className="mt-xs font-semibold text-text-primary">{formatDate(user.registrationDate)}</p>
                   </div>
                 </div>
-                <div className="mt-md">
-                  <Select
-                    label="Approve as"
-                    value={roleSelection[user.id] || 'employee'}
-                    onChange={event => setRoleSelection(previous => ({ ...previous, [user.id]: event.target.value as UserRole }))}
-                    options={roleSelectOptions}
-                  />
-                </div>
+
                 <div className="mt-md flex flex-wrap gap-sm">
                   <Button variant="secondary" className="px-md" onClick={() => setFocusedUser(user)} aria-label="View details">
                     <Eye className="h-4 w-4" />

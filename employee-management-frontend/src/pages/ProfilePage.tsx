@@ -23,11 +23,32 @@ export const ProfilePage: React.FC = () => {
   })
 
   const { employees } = useEmployees()
+  const { updateUserDetails, updateCurrentUser } = useAuth()
 
   const employeeProfile = useMemo(() => {
-    if (!employees.length) return null
-    return employees.find(employee => employee.email === user?.email) ?? null
-  }, [user?.email, employees])
+    const found = employees.find(employee => employee.email === user?.email)
+    if (found) return found
+    
+    if (user) {
+      return {
+        id: user.id || 'me',
+        firstName: user.name.split(' ')[0] || '',
+        lastName: user.name.split(' ').slice(1).join(' ') || '',
+        email: user.email,
+        phone: '',
+        department: user.department || 'Management',
+        position: user.role === 'super_admin' ? 'Super Admin' : (user.role === 'admin_hr' ? 'HR / Admin' : 'Employee'),
+        startDate: user.registrationDate ? user.registrationDate.split('T')[0] : '',
+        status: 'active',
+        avatar: `https://ui-avatars.com/api/?name=${user.name}`,
+        salary: 0,
+        performanceScore: 100,
+        projects: [],
+        attendanceLog: []
+      }
+    }
+    return null
+  }, [user, employees])
 
   React.useEffect(() => {
     if (employeeProfile) {
@@ -87,14 +108,30 @@ export const ProfilePage: React.FC = () => {
     setErrorMessage(null)
     try {
       if (employeeProfile) {
-        await updateEmployee(employeeProfile.id, {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phone: formData.phone,
-          department: formData.department,
-          position: formData.designation,
-        });
+        if (employeeProfile.id === 'me' || !employees.some(e => e.id === employeeProfile.id)) {
+          await updateUserDetails(user!.id, {
+            name: `${formData.firstName} ${formData.lastName}`,
+            email: formData.email,
+            department: formData.department
+          });
+          updateCurrentUser({
+            name: `${formData.firstName} ${formData.lastName}`,
+            email: formData.email
+          });
+        } else {
+          await updateEmployee(employeeProfile.id, {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phone: formData.phone,
+            department: formData.department,
+            position: formData.designation,
+          });
+          updateCurrentUser({
+            name: `${formData.firstName} ${formData.lastName}`,
+            email: formData.email
+          });
+        }
       }
       setIsEditing(false)
     } catch (e: any) {

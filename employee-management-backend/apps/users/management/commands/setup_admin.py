@@ -37,7 +37,7 @@ class Command(BaseCommand):
             first_name='Team',
             last_name='Supervisor',
             employee_id='EMP-SUP-01',
-            is_staff=False,
+            is_staff=True,
             is_superuser=False
         )
 

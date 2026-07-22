@@ -21,9 +21,9 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    search_fields = ['employee__first_name', 'employee__last_name', 'employee__department__name', 'leave_type']
-    filterset_fields = ['status', 'leave_type']
-    ordering_fields = ['start_date', 'employee__first_name']
+    search_fields = ['employee__user__first_name', 'employee__user__last_name', 'employee__department__name']
+    filterset_fields = ['status']
+    ordering_fields = ['start_date', 'employee__user__first_name']
     ordering = ['-start_date']
 
     def get_queryset(self):

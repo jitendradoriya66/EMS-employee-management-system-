@@ -35,9 +35,29 @@ export function useDepartments() {
     }
   };
 
+  const updateDepartment = async (id: string, departmentData: { name: string, description: string }) => {
+    try {
+      await apiClient.patch(`/api/v1/departments/${id}/`, departmentData);
+      await fetchDepartments();
+    } catch (err) {
+      console.error('Failed to update department', err);
+      throw err;
+    }
+  };
+
+  const deleteDepartment = async (id: string) => {
+    try {
+      await apiClient.delete(`/api/v1/departments/${id}/`);
+      await fetchDepartments();
+    } catch (err) {
+      console.error('Failed to delete department', err);
+      throw err;
+    }
+  };
+
   useEffect(() => {
     fetchDepartments();
   }, []);
 
-  return { departments, loading, fetchDepartments, addDepartment };
+  return { departments, loading, fetchDepartments, addDepartment, updateDepartment, deleteDepartment };
 }

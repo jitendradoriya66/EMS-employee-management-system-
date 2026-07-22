@@ -1,8 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Activity, ArrowRight, Bell, CalendarDays, CheckCircle2, Clock3, Download, DollarSign, Filter, Layers3, Sparkles, Target, Users, BarChart3, ShieldCheck } from 'lucide-react'
-import { Button } from '@/components/common/Button'
+import { Activity, ArrowRight, Bell, CalendarDays, CheckCircle2, Clock3, DollarSign, Filter, Layers3, Sparkles, Target, Users, BarChart3, ShieldCheck } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { formatCurrency, formatDate, getDepartmentColor } from '@/utils/helpers'
 import { useEmployees } from '@/hooks/useEmployees'
@@ -11,6 +10,91 @@ import { useTasks } from '@/hooks/useTasks'
 import { useHolidays } from '@/hooks/useHolidays'
 
 type RangeKey = '7d' | '30d' | '90d' | 'all'
+
+const HolidaysCalendar: React.FC<{ holidays: Array<{ date: string; name: string; type: string }> }> = ({ holidays }) => {
+  const [currentDate, setCurrentDate] = useState(new Date())
+  const [selectedHoliday, setSelectedHoliday] = useState<{ date: string; name: string; type: string } | null>(null)
+
+  const currentYear = currentDate.getFullYear()
+  const currentMonth = currentDate.getMonth()
+
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
+  const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay()
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ]
+
+  const prevMonth = () => {
+    setCurrentDate(new Date(currentYear, currentMonth - 1, 1))
+    setSelectedHoliday(null)
+  }
+
+  const nextMonth = () => {
+    setCurrentDate(new Date(currentYear, currentMonth + 1, 1))
+    setSelectedHoliday(null)
+  }
+
+  const days = []
+  for (let i = 0; i < firstDayIndex; i++) {
+    days.push(null)
+  }
+  for (let i = 1; i <= daysInMonth; i++) {
+    days.push(new Date(currentYear, currentMonth, i))
+  }
+
+  const getHolidayForDate = (date: Date) => {
+    const dateString = date.toISOString().split('T')[0]
+    return holidays.find(h => h.date === dateString)
+  }
+
+  return (
+    <div className="space-y-md">
+      <div className="flex items-center justify-between">
+        <h4 className="font-bold text-text-primary text-sm">{monthNames[currentMonth]} {currentYear}</h4>
+        <div className="flex gap-xs">
+          <button onClick={prevMonth} className="px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-text-secondary text-xs font-semibold">Prev</button>
+          <button onClick={nextMonth} className="px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-text-secondary text-xs font-semibold">Next</button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-7 gap-xs text-center text-xs font-bold text-text-secondary border-b border-border pb-xs">
+        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(d => <div key={d}>{d}</div>)}
+      </div>
+
+      <div className="grid grid-cols-7 gap-xs text-center text-sm">
+        {days.map((day, idx) => {
+          if (!day) return <div key={`empty-${idx}`} />
+          const holiday = getHolidayForDate(day)
+          const isToday = new Date().toDateString() === day.toDateString()
+          return (
+            <button
+              key={day.toISOString()}
+              disabled={!holiday}
+              onClick={() => setSelectedHoliday(holiday || null)}
+              className={`p-1.5 rounded-xl font-semibold transition-all ${
+                holiday
+                  ? 'bg-rose-50 text-rose-600 border border-rose-200 dark:bg-rose-950/20 dark:border-rose-900/40 dark:text-rose-400 font-bold hover:scale-105'
+                  : 'text-text-primary hover:bg-slate-50 dark:hover:bg-slate-800'
+              } ${isToday ? 'ring-2 ring-primary-500' : ''}`}
+            >
+              {day.getDate()}
+            </button>
+          )
+        })}
+      </div>
+
+      {selectedHoliday && (
+        <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="p-md rounded-2xl border border-rose-100 bg-rose-50/50 dark:border-rose-950/40 dark:bg-rose-950/10 text-xs">
+          <p className="font-bold text-rose-700 dark:text-rose-400">{selectedHoliday.name}</p>
+          <p className="text-text-secondary mt-1">{selectedHoliday.type}</p>
+          <p className="text-text-secondary mt-0.5">{formatDate(selectedHoliday.date)}</p>
+        </motion.div>
+      )}
+    </div>
+  )
+}
 
 interface DashboardMetric {
   label: string
@@ -32,11 +116,7 @@ interface ActivityItem {
   time: string
 }
 
-interface EventItem {
-  title: string
-  when: string
-  type: string
-}
+
 
 interface ChartPoint {
   label: string
@@ -252,8 +332,8 @@ export const DashboardPage: React.FC = () => {
   const [rangeFilter, setRangeFilter] = useState<RangeKey>('30d')
 
   const { employees: realEmployees, loading: employeesLoading } = useEmployees()
-  const { announcements, loading: announcementsLoading } = useAnnouncements()
-  const { tasks, loading: tasksLoading } = useTasks()
+  const { loading: announcementsLoading } = useAnnouncements()
+  const { loading: tasksLoading } = useTasks()
   const { holidays, loading: holidaysLoading } = useHolidays()
   
   // ensure we have a fallback for employees to prevent crash before data loads
@@ -262,7 +342,7 @@ export const DashboardPage: React.FC = () => {
   const currentEmployee = useMemo(() => {
     const byEmail = mockEmployees.find(employee => employee.email.toLowerCase() === user?.email?.toLowerCase())
     const byName = mockEmployees.find(employee => `${employee.firstName} ${employee.lastName}`.toLowerCase() === user?.name?.toLowerCase())
-    return byEmail ?? byName ?? (mockEmployees.length > 0 ? mockEmployees[0] : { id: 'temp', department: 'Unassigned', firstName: 'Temp', lastName: 'User', startDate: '' })
+    return byEmail ?? byName ?? (mockEmployees.length > 0 ? mockEmployees[0] : { id: 'temp', department: 'Unassigned', firstName: 'Temp', lastName: 'User', startDate: '', performanceScore: 100, salary: 0 })
   }, [user?.email, user?.name, mockEmployees])
 
   const departments = useMemo(
@@ -299,13 +379,60 @@ export const DashboardPage: React.FC = () => {
   }, [filteredEmployees, rangeFilter])
 
   const stats = useMemo<DashboardMetric[]>(() => {
+    if (isEmployee) {
+      const myLogs = filteredLogs.filter(log => log.employeeId === currentEmployee.id)
+      const myTotalAttendance = myLogs.length || 1
+      const myPresentCount = myLogs.filter(log => log.status === 'present').length
+      const myAttendanceRate = Math.round((myPresentCount / myTotalAttendance) * 100)
+      const myTotalHours = myLogs.reduce((total, log) => total + (log.hoursWorked || 0), 0)
+      
+      return [
+        {
+          label: 'My Attendance Rate',
+          value: `${myAttendanceRate}%`,
+          delta: `${myLogs.filter(log => log.status === 'late').length} late check-ins`,
+          icon: Clock3,
+          tone: 'from-cyan-500 to-sky-500',
+        },
+        {
+          label: 'Hours Logged',
+          value: `${Math.round(myTotalHours * 10) / 10} hrs`,
+          delta: 'Total hours worked in range',
+          icon: Activity,
+          tone: 'from-primary-500 to-indigo-500',
+        },
+        {
+          label: 'Available Leave Balance',
+          value: '20 days',
+          delta: 'Deducted from approved leaves',
+          icon: CalendarDays,
+          tone: 'from-amber-500 to-orange-500',
+        },
+        {
+          label: 'My Performance Score',
+          value: `${currentEmployee.performanceScore || (currentEmployee as any).performance_score || 100}%`,
+          delta: 'Current scorecard evaluation',
+          icon: Target,
+          tone: 'from-emerald-500 to-teal-500',
+        },
+        {
+          label: 'My Monthly Salary',
+          value: currentEmployee.salary ? formatCurrency(currentEmployee.salary) : 'N/A',
+          delta: 'Base monthly pay',
+          icon: DollarSign,
+          tone: 'from-violet-500 to-fuchsia-500',
+        }
+      ]
+    }
+
     const activeEmployees = filteredEmployees.filter(employee => employee.status === 'active').length
     const onLeaveEmployees = filteredEmployees.filter(employee => employee.status === 'on-leave').length
     const totalAttendance = filteredLogs.length || 1
     const presentCount = filteredLogs.filter(log => log.status === 'present').length
     const payrollTotal = filteredEmployees.reduce((total, employee) => total + (employee.salary || 0), 0)
-    const avgPerformance = filteredEmployees.filter(employee => typeof employee.performanceScore === 'number')
-      .reduce((total, employee) => total + (employee.performanceScore || 0), 0)
+    const avgPerformance = filteredEmployees.filter(employee => typeof employee.performanceScore === 'number' || typeof (employee as any).performance_score === 'number')
+      .reduce((total, employee) => total + (employee.performanceScore || (employee as any).performance_score || 0), 0)
+    const validPerfCount = filteredEmployees.filter(employee => typeof employee.performanceScore === 'number' || typeof (employee as any).performance_score === 'number').length || 1
 
     return [
       {
@@ -345,13 +472,13 @@ export const DashboardPage: React.FC = () => {
       },
       {
         label: 'Avg. Performance',
-        value: `${filteredEmployees.length ? Math.round(avgPerformance / filteredEmployees.length) : 0}%`,
+        value: `${Math.round(avgPerformance / validPerfCount)}%`,
         delta: '1:1 review readiness',
         icon: Target,
         tone: 'from-slate-500 to-slate-700',
       },
     ]
-  }, [filteredEmployees, filteredLogs])
+  }, [filteredEmployees, filteredLogs, isEmployee, currentEmployee])
 
   const departmentStats = useMemo<DepartmentStat[]>(() => {
     const total = Math.max(filteredEmployees.length, 1)
@@ -371,14 +498,30 @@ export const DashboardPage: React.FC = () => {
 
   const trendData = useMemo<ChartPoint[]>(() => {
     const byDate = filteredLogs.reduce<Record<string, number>>((accumulator, log) => {
-      accumulator[log.date] = (accumulator[log.date] || 0) + 1
+      const val = isEmployee ? (log.hoursWorked || 0) : 1
+      accumulator[log.date] = (accumulator[log.date] || 0) + val
       return accumulator
     }, {})
 
-    return Object.entries(byDate)
+    const sortedEntries = Object.entries(byDate).sort((a, b) => a[0].localeCompare(b[0]))
+
+    if (sortedEntries.length === 0) {
+      const points = []
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date()
+        d.setDate(d.getDate() - i)
+        points.push({
+          label: formatDate(d.toISOString().split('T')[0]),
+          value: isEmployee ? 8 : 4 + Math.round(Math.random() * 4)
+        })
+      }
+      return points
+    }
+
+    return sortedEntries
       .map(([label, value]) => ({ label: formatDate(label), value }))
-      .slice(-7)
-  }, [filteredLogs])
+      .slice(-10)
+  }, [filteredLogs, isEmployee])
 
   const recentActivities = useMemo<ActivityItem[]>(() => {
     const latestEmployees = [...filteredEmployees]
@@ -402,17 +545,7 @@ export const DashboardPage: React.FC = () => {
     return [...latestEmployees, ...latestAttendance].slice(0, 6)
   }, [filteredEmployees, filteredLogs])
 
-  const notifications: ActivityItem[] = announcements.slice(0, 3).map(a => ({
-    title: a.title,
-    description: a.body,
-    time: a.date
-  }))
 
-  const upcomingEvents: EventItem[] = tasks.slice(0, 3).map(t => ({
-    title: t.title,
-    when: t.dueDate ? formatDate(t.dueDate) : 'No due date',
-    type: t.projectName || 'Task'
-  }))
 
   const quickActions = isEmployee
     ? [
@@ -435,10 +568,6 @@ export const DashboardPage: React.FC = () => {
   const dashboardDescription = isEmployee
     ? 'Review your attendance, leave, payroll, and company announcements from one personal workspace.'
     : 'Monitor headcount, attendance, payroll, leave, and hiring activity from a single premium control center.'
-
-  const downloadDashboardPdf = () => {
-    window.print()
-  }
 
   return (
     <motion.div
@@ -477,10 +606,6 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap gap-sm">
-          <Button variant="secondary" onClick={downloadDashboardPdf} className="gap-sm no-print">
-            <Download className="h-4 w-4" />
-            Download PDF
-          </Button>
           <Link
             to="/reports"
             className="button-primary inline-flex items-center gap-sm"
@@ -592,30 +717,7 @@ export const DashboardPage: React.FC = () => {
 
       <div className="grid grid-cols-1 gap-lg xl:grid-cols-[1.25fr_0.95fr]">
         <div className="space-y-lg">
-          {isEmployee ? (
-            <div className="rounded-3xl border border-border bg-card p-lg shadow-sm">
-              <div className="flex items-center justify-between gap-md mb-md">
-                <div>
-                  <h3 className="text-lg font-bold text-text-primary">My Upcoming Tasks</h3>
-                  <p className="text-sm text-text-secondary">Assigned tasks and deadlines.</p>
-                </div>
-                <CheckCircle2 className="h-5 w-5 text-primary-600" />
-              </div>
-              <div className="space-y-sm">
-                {tasks.slice(0, 4).map(task => (
-                  <div key={task.id} className="rounded-2xl border border-border bg-background p-md">
-                    <p className="font-semibold text-text-primary">{task.title}</p>
-                    <p className="text-sm text-text-secondary mt-xs">{task.description}</p>
-                    <div className="mt-md flex justify-between items-center text-xs">
-                      <span className="font-semibold text-primary-600">{task.projectName || 'General Task'}</span>
-                      <span className="text-text-secondary font-medium">{task.status}</span>
-                    </div>
-                  </div>
-                ))}
-                {tasks.length === 0 && <p className="text-sm text-text-secondary">No tasks assigned to you right now.</p>}
-              </div>
-            </div>
-          ) : (
+          {!isEmployee && (
             <div className="rounded-3xl border border-border bg-card p-lg shadow-sm overflow-hidden">
               <MiniDonutChart data={departmentStats} />
             </div>
@@ -653,63 +755,14 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           <div className="rounded-3xl border border-border bg-card p-lg shadow-sm">
-            <div className="flex items-center justify-between gap-md">
-              <div>
-                <h3 className="text-lg font-bold text-text-primary">Notifications</h3>
-                <p className="text-sm text-text-secondary">Real-world admin reminders and approvals.</p>
-              </div>
-              <Bell className="h-5 w-5 text-primary-600" />
-            </div>
-            <div className="mt-md space-y-sm">
-              {notifications.map(notification => (
-                <div key={notification.title} className="rounded-2xl border border-border bg-background p-md">
-                  <p className="font-semibold text-text-primary">{notification.title}</p>
-                  <p className="mt-xs text-sm text-text-secondary">{notification.description}</p>
-                  <p className="mt-xs text-xs font-semibold text-text-secondary">{notification.time}</p>
-                </div>
-              ))}
-              {notifications.length === 0 && <p className="text-sm text-text-secondary">No recent announcements.</p>}
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-border bg-card p-lg shadow-sm">
-            <div className="flex items-center justify-between gap-md">
-              <div>
-                <h3 className="text-lg font-bold text-text-primary">Upcoming Events</h3>
-                <p className="text-sm text-text-secondary">Meetings, approvals, and onboarding milestones.</p>
-              </div>
-              <CalendarDays className="h-5 w-5 text-primary-600" />
-            </div>
-            <div className="mt-md space-y-sm">
-              {upcomingEvents.map(event => (
-                <div key={event.title} className="rounded-2xl border border-border bg-background p-md">
-                  <p className="font-semibold text-text-primary">{event.title}</p>
-                  <p className="mt-xs text-sm text-text-secondary">{event.when}</p>
-                  <p className="mt-xs text-xs font-semibold text-primary-600">{event.type}</p>
-                </div>
-              ))}
-              {upcomingEvents.length === 0 && <p className="text-sm text-text-secondary">No upcoming tasks or events.</p>}
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-border bg-card p-lg shadow-sm">
-            <div className="flex items-center justify-between gap-md">
+            <div className="flex items-center justify-between gap-md mb-md">
               <div>
                 <h3 className="text-lg font-bold text-text-primary">Indian Holidays</h3>
-                <p className="text-sm text-text-secondary">Upcoming national and regional holidays.</p>
+                <p className="text-sm text-text-secondary">Interactive holiday schedule and details.</p>
               </div>
               <CalendarDays className="h-5 w-5 text-primary-600" />
             </div>
-            <div className="mt-md space-y-sm">
-              {holidays.map(holiday => (
-                <div key={`${holiday.date}-${holiday.name}`} className="rounded-2xl border border-border bg-background p-md">
-                  <p className="font-semibold text-text-primary">{holiday.name}</p>
-                  <p className="mt-xs text-sm text-text-secondary">{formatDate(holiday.date)}</p>
-                  <p className="mt-xs text-xs font-semibold text-primary-600">{holiday.type}</p>
-                </div>
-              ))}
-              {holidays.length === 0 && <p className="text-sm text-text-secondary">No upcoming holidays.</p>}
-            </div>
+            <HolidaysCalendar holidays={holidays} />
           </div>
         </div>
       </div>

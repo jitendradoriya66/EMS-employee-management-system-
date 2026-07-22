@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { Building2, Users, BriefcaseBusiness, TrendingUp, ShieldCheck, X, Network } from 'lucide-react'
+import { Building2, Users, BriefcaseBusiness, TrendingUp, ShieldCheck, X, Network, Edit2, Trash2, Eye } from 'lucide-react'
 import { Badge } from '@/components/common/Badge'
 import { Button } from '@/components/common/Button'
 import { useDepartments } from '@/hooks/useDepartments'
@@ -11,7 +11,7 @@ import { AnimatePresence } from 'framer-motion'
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
 
 export const DepartmentsPage: React.FC = () => {
-  const { departments, loading, addDepartment } = useDepartments()
+  const { departments, loading, addDepartment, updateDepartment, deleteDepartment } = useDepartments()
   const [isAdding, setIsAdding] = React.useState(false)
   const [showOrgChart, setShowOrgChart] = React.useState(false)
   const [newDept, setNewDept] = React.useState({ name: '', description: '' })
@@ -19,9 +19,17 @@ export const DepartmentsPage: React.FC = () => {
   const [error, setError] = React.useState<string | null>(null)
   const [toast] = React.useState<string | null>(null)
 
+  const [viewingDept, setViewingDept] = React.useState<any | null>(null)
+  const [editingDept, setEditingDept] = React.useState<any | null>(null)
+  const [deletingDept, setDeletingDept] = React.useState<any | null>(null)
+  const [editError, setEditError] = React.useState<string | null>(null)
+  const [editSubmitting, setEditSubmitting] = React.useState(false)
+
   const departmentStats = useMemo(() => {
     return departments.map(dept => ({
+      id: dept.id,
       department: dept.name,
+      description: dept.description || '',
       count: dept.headcount || 0,
       manager: dept.managerName || 'Department Lead',
       openRoles: Math.max(0, 5 - (dept.headcount || 0)),
@@ -146,8 +154,33 @@ export const DepartmentsPage: React.FC = () => {
                 <h2 className="mt-md text-xl font-bold text-text-primary">{item.department} Team</h2>
                 <p className="mt-xs text-sm text-text-secondary">Managed by {item.manager}</p>
               </div>
-              <div className="rounded-2xl bg-primary-50 p-sm text-primary-700 dark:bg-primary-500/15 dark:text-cyan-200">
-                <ShieldCheck className="h-5 w-5" />
+              <div className="flex flex-col items-end gap-sm">
+                <div className="rounded-2xl bg-primary-50 p-sm text-primary-700 dark:bg-primary-500/15 dark:text-cyan-200">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                <div className="flex gap-xs">
+                  <button
+                    onClick={() => setViewingDept(item)}
+                    className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-text-secondary hover:text-primary transition-colors"
+                    title="View Details"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setEditingDept({ id: item.id, name: item.department, description: item.description })}
+                    className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-text-secondary hover:text-primary transition-colors"
+                    title="Edit Department"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setDeletingDept({ id: item.id, name: item.department })}
+                    className="p-1 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg text-text-secondary hover:text-rose-600 transition-colors"
+                    title="Delete Department"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -286,6 +319,186 @@ export const DepartmentsPage: React.FC = () => {
                   </div>
                 </TransformComponent>
                 </TransformWrapper>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* View Department Details Modal */}
+        {viewingDept && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-md backdrop-blur-sm"
+            onClick={() => setViewingDept(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.98 }}
+              className="w-full max-w-md overflow-hidden rounded-[28px] border border-border bg-card p-lg shadow-2xl flex flex-col text-left"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-border pb-md mb-md">
+                <h3 className="text-xl font-bold text-text-primary flex items-center gap-sm">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  {viewingDept.department} Details
+                </h3>
+                <button onClick={() => setViewingDept(null)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-text-secondary">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="space-y-md">
+                <div className="rounded-2xl border border-border bg-background p-md">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Description</p>
+                  <p className="mt-xs text-sm text-text-primary leading-relaxed">
+                    {viewingDept.description || 'No description provided.'}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-border bg-background p-md">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Department Manager</p>
+                  <p className="mt-xs text-sm font-semibold text-text-primary">{viewingDept.manager}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-sm">
+                  <div className="rounded-2xl border border-border bg-background p-md text-center">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Headcount</p>
+                    <p className="mt-sm text-3xl font-black text-text-primary">{viewingDept.count}</p>
+                  </div>
+                  <div className="rounded-2xl border border-border bg-background p-md text-center">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Open Roles</p>
+                    <p className="mt-sm text-3xl font-black text-text-primary">{viewingDept.openRoles}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-lg flex justify-end">
+                <Button variant="secondary" className="w-full sm:w-auto" onClick={() => setViewingDept(null)}>
+                  Close
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Edit Department Modal */}
+        {editingDept && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-md backdrop-blur-sm"
+            onClick={() => { setEditingDept(null); setEditError(null); }}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.98 }}
+              className="w-full max-w-md overflow-hidden rounded-[28px] border border-border bg-card p-lg shadow-2xl flex flex-col text-left"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-border pb-md mb-md">
+                <h3 className="text-xl font-bold text-text-primary flex items-center gap-sm">
+                  <Edit2 className="h-5 w-5 text-primary" />
+                  Edit Department
+                </h3>
+                <button onClick={() => { setEditingDept(null); setEditError(null); }} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-text-secondary">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {editError && <Alert variant="error" title="Error" className="mb-md">{editError}</Alert>}
+
+              <div className="space-y-md">
+                <Input
+                  label="Department Name"
+                  placeholder="e.g. Engineering"
+                  value={editingDept.name}
+                  onChange={e => setEditingDept((prev: any) => ({ ...prev, name: e.target.value }))}
+                />
+                <Input
+                  label="Description"
+                  placeholder="Brief description"
+                  value={editingDept.description}
+                  onChange={e => setEditingDept((prev: any) => ({ ...prev, description: e.target.value }))}
+                />
+              </div>
+
+              <div className="mt-lg flex gap-sm justify-end">
+                <Button variant="secondary" onClick={() => { setEditingDept(null); setEditError(null); }}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  isLoading={editSubmitting}
+                  onClick={async () => {
+                    try {
+                      setEditSubmitting(true);
+                      setEditError(null);
+                      await updateDepartment(editingDept.id, {
+                        name: editingDept.name,
+                        description: editingDept.description
+                      });
+                      setEditingDept(null);
+                    } catch (err: any) {
+                      setEditError(err.response?.data?.detail || 'Failed to update department');
+                    } finally {
+                      setEditSubmitting(false);
+                    }
+                  }}
+                >
+                  Save Changes
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Delete Department Modal */}
+        {deletingDept && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-md backdrop-blur-sm"
+            onClick={() => setDeletingDept(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.98 }}
+              className="w-full max-w-md overflow-hidden rounded-[28px] border border-border bg-card p-lg shadow-2xl flex flex-col text-left space-y-md"
+              onClick={e => e.stopPropagation()}
+            >
+              <div>
+                <h3 className="text-xl font-bold text-text-primary flex items-center gap-sm">
+                  <Trash2 className="h-5 w-5 text-rose-600" />
+                  Delete Department
+                </h3>
+                <p className="mt-sm text-sm text-text-secondary">
+                  Are you sure you want to delete the department <strong>{deletingDept.name}</strong>? This action cannot be undone.
+                </p>
+              </div>
+
+              <div className="flex gap-sm justify-end">
+                <Button variant="secondary" onClick={() => setDeletingDept(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                  onClick={async () => {
+                    try {
+                      await deleteDepartment(deletingDept.id);
+                      setDeletingDept(null);
+                    } catch (err) {
+                      console.error(err);
+                    }
+                  }}
+                >
+                  Delete
+                </Button>
               </div>
             </motion.div>
           </motion.div>

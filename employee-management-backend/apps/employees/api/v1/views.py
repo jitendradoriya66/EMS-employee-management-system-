@@ -19,10 +19,10 @@ class EmployeeListAPIView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    search_fields = ['first_name', 'last_name', 'department__name', 'designation', 'employee_id']
+    search_fields = ['user__first_name', 'user__last_name', 'department__name', 'position', 'user__employee_id']
     filterset_fields = ['department', 'status']
-    ordering_fields = ['first_name', 'date_of_joining']
-    ordering = ['first_name']
+    ordering_fields = ['user__first_name', 'start_date']
+    ordering = ['user__first_name']
 
 class EmployeeCreateAPIView(generics.CreateAPIView):
     """

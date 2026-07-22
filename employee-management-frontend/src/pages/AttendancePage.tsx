@@ -87,8 +87,6 @@ export const AttendancePage: React.FC = () => {
   const activeRecord = todaysRecords.find(r => r.status !== 'leave' && !r.checkOut)
   
   const hasCheckedIn = !!activeRecord // True if currently in a session
-  const hasCompletedSession = todaysRecords.some(r => r.status !== 'leave' && r.checkIn && r.checkOut)
-  const isShiftComplete = !hasCheckedIn && hasCompletedSession && !isOnLeaveToday
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / itemsPerPage)), [totalCount, itemsPerPage])
 
@@ -206,7 +204,7 @@ export const AttendancePage: React.FC = () => {
               </p>
               
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-md pt-sm">
-                {!hasCheckedIn && !isShiftComplete && !isOnLeaveToday && (
+                {!hasCheckedIn && !isOnLeaveToday && (
                   <button 
                     onClick={handleCheckIn} 
                     className="w-full sm:w-auto min-w-[140px] px-xl py-lg rounded-2xl bg-primary-600 hover:bg-primary-700 text-white font-bold tracking-wide shadow-md hover:shadow-lg transition-all active:scale-95"
@@ -223,13 +221,6 @@ export const AttendancePage: React.FC = () => {
                   </button>
                 )}
               </div>
-
-              {isShiftComplete && !isOnLeaveToday && (
-                <div className="inline-flex items-center gap-xs px-md py-sm rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm font-semibold dark:bg-emerald-950/30 dark:border-emerald-900/50 dark:text-emerald-400">
-                  <CalendarCheck2 className="h-4 w-4" />
-                  Your shift is complete for today. Great work!
-                </div>
-              )}
 
               {isOnLeaveToday && (
                 <div className="inline-flex items-center gap-xs px-md py-sm rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-sm font-semibold dark:bg-amber-950/30 dark:border-amber-900/50 dark:text-amber-400">

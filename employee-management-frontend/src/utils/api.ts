@@ -45,10 +45,7 @@ export const fetchEmployees = async (
       }
     }
 
-    const [empRes, statsRes] = await Promise.all([
-      apiClient.get(`/api/v1/employees/?${params.toString()}`),
-      apiClient.get(`/api/v1/employees/stats/?${params.toString()}`)
-    ])
+    const empRes = await apiClient.get(`/api/v1/employees/?${params.toString()}`)
 
     const allEmployees = empRes.data.results || empRes.data
     const total = empRes.data.count || allEmployees.length
@@ -57,7 +54,7 @@ export const fetchEmployees = async (
     return {
       employees,
       total,
-      stats: statsRes.data
+      stats: null
     }
   } catch (error) {
     console.error('Error fetching employees:', error)
