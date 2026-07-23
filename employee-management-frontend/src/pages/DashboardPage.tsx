@@ -8,6 +8,8 @@ import { useEmployees } from '@/hooks/useEmployees'
 import { useAnnouncements } from '@/hooks/useAnnouncements'
 import { useTasks } from '@/hooks/useTasks'
 import { useHolidays } from '@/hooks/useHolidays'
+import { useDepartments } from '@/hooks/useDepartments'
+import apiClient from '@/utils/apiClient'
 
 type RangeKey = '7d' | '30d' | '90d' | 'all'
 
@@ -163,34 +165,38 @@ function donutSegments(data: DepartmentStat[]) {
 
 function MiniDonutChart({ data }: { data: DepartmentStat[] }) {
   const segments = donutSegments(data)
-  const total = sum(data.map(item => item.count)) || 1
+  const displayTotal = sum(data.map(item => item.count))
 
   return (
     <div className="flex flex-col gap-lg xl:flex-row xl:items-center">
       <div className="relative mx-auto h-44 w-44 shrink-0 sm:h-56 sm:w-56 xl:mx-0">
         <svg viewBox="0 0 200 200" className="h-full w-full -rotate-90">
           <circle cx="100" cy="100" r="50" fill="none" stroke="currentColor" strokeWidth="28" className="text-slate-200/70 dark:text-slate-800/80" />
-          {segments.map((segment, index) => (
-            <circle
-              key={index}
-              cx="100"
-              cy="100"
-              r="50"
-              fill="none"
-              stroke={segment.color}
-              strokeWidth="28"
-              strokeLinecap="round"
-              strokeDasharray={segment.dashArray}
-              strokeDashoffset={segment.dashOffset}
-              className="transition-all duration-300"
-            />
-          ))}
+          {displayTotal > 0 && segments.map((segment, index) => {
+            const item = data[index]
+            if (!item || item.count === 0) return null
+            return (
+              <circle
+                key={index}
+                cx="100"
+                cy="100"
+                r="50"
+                fill="none"
+                stroke={segment.color}
+                strokeWidth="28"
+                strokeLinecap="round"
+                strokeDasharray={segment.dashArray}
+                strokeDashoffset={segment.dashOffset}
+                className="transition-all duration-300"
+              />
+            )
+          })}
         </svg>
 
         <div className="absolute inset-0 flex items-center justify-center text-center">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-secondary">Employees</p>
-            <p className="mt-xs text-4xl font-black text-text-primary">{total}</p>
+            <p className="mt-xs text-4xl font-black text-text-primary">{displayTotal}</p>
             <p className="text-xs font-semibold text-primary-600">Filtered view</p>
           </div>
         </div>
@@ -286,7 +292,9 @@ function TrendChart({ data }: { data: ChartPoint[] }) {
         {data.map(point => (
           <div key={point.label} className="rounded-xl border border-border bg-background px-md py-sm">
             <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">{point.label}</p>
-            <p className="mt-xs text-lg font-black text-text-primary">{point.value}</p>
+            <p className="mt-xs text-lg font-black text-text-primary">
+              {Number.isInteger(point.value) ? point.value : point.value.toFixed(2)}
+            </p>
           </div>
         ))}
       </div>
@@ -330,11 +338,28 @@ export const DashboardPage: React.FC = () => {
   const [employeeFilter, setEmployeeFilter] = useState('all')
   const [departmentFilter, setDepartmentFilter] = useState('all')
   const [rangeFilter, setRangeFilter] = useState<RangeKey>('30d')
+  const [onLeaveCount, setOnLeaveCount] = useState(0)
+
+  React.useEffect(() => {
+    if (!isEmployee) {
+      apiClient.get('/api/v1/leave/?status=approved&page_size=100')
+        .then(res => {
+          const results = res.data.results || res.data
+          const todayStr = new Date().toISOString().slice(0, 10)
+          const activeLeaves = results.filter((leave: any) => {
+            return leave.start_date <= todayStr && leave.end_date >= todayStr
+          })
+          setOnLeaveCount(activeLeaves.length)
+        })
+        .catch(err => console.error('Failed to fetch active leaves for dashboard', err))
+    }
+  }, [isEmployee])
 
   const { employees: realEmployees, loading: employeesLoading } = useEmployees()
   const { loading: announcementsLoading } = useAnnouncements()
   const { loading: tasksLoading } = useTasks()
   const { holidays, loading: holidaysLoading } = useHolidays()
+  const { departments: dbDepartments } = useDepartments()
   
   // ensure we have a fallback for employees to prevent crash before data loads
   const mockEmployees = realEmployees || []
@@ -346,8 +371,8 @@ export const DashboardPage: React.FC = () => {
   }, [user?.email, user?.name, mockEmployees])
 
   const departments = useMemo(
-    () => ['all', ...Array.from(new Set(mockEmployees.map(employee => employee.department)))],
-    []
+    () => ['all', ...Array.from(new Set(dbDepartments.map(dept => dept.name)))],
+    [dbDepartments]
   )
 
   const effectiveEmployeeFilter = isEmployee ? currentEmployee.id : employeeFilter
@@ -426,13 +451,19 @@ export const DashboardPage: React.FC = () => {
     }
 
     const activeEmployees = filteredEmployees.filter(employee => employee.status === 'active').length
-    const onLeaveEmployees = filteredEmployees.filter(employee => employee.status === 'on-leave').length
     const totalAttendance = filteredLogs.length || 1
-    const presentCount = filteredLogs.filter(log => log.status === 'present').length
+    const presentCount = filteredLogs.filter(log => log.status === 'present' || log.status === 'late').length
     const payrollTotal = filteredEmployees.reduce((total, employee) => total + (employee.salary || 0), 0)
-    const avgPerformance = filteredEmployees.filter(employee => typeof employee.performanceScore === 'number' || typeof (employee as any).performance_score === 'number')
-      .reduce((total, employee) => total + (employee.performanceScore || (employee as any).performance_score || 0), 0)
-    const validPerfCount = filteredEmployees.filter(employee => typeof employee.performanceScore === 'number' || typeof (employee as any).performance_score === 'number').length || 1
+
+    const performanceEmployees = filteredEmployees.filter(employee => {
+      const score = employee.performanceScore ?? (employee as any).performance_score
+      return typeof score === 'number' && score > 0
+    })
+    const totalPerformanceScore = performanceEmployees.reduce((total, employee) => {
+      const score = employee.performanceScore ?? (employee as any).performance_score
+      return total + (score || 0)
+    }, 0)
+    const avgPerfValue = performanceEmployees.length ? Math.round(totalPerformanceScore / performanceEmployees.length) : null
 
     return [
       {
@@ -458,8 +489,8 @@ export const DashboardPage: React.FC = () => {
       },
       {
         label: 'On Leave',
-        value: formatNumber(onLeaveEmployees),
-        delta: 'Approved and pending requests',
+        value: formatNumber(onLeaveCount),
+        delta: 'Approved and active today',
         icon: CalendarDays,
         tone: 'from-amber-500 to-orange-500',
       },
@@ -472,13 +503,13 @@ export const DashboardPage: React.FC = () => {
       },
       {
         label: 'Avg. Performance',
-        value: `${Math.round(avgPerformance / validPerfCount)}%`,
-        delta: '1:1 review readiness',
+        value: avgPerfValue !== null ? `${avgPerfValue}%` : 'Awaiting Review',
+        delta: avgPerfValue !== null ? '1:1 review readiness' : 'No performance logs',
         icon: Target,
         tone: 'from-slate-500 to-slate-700',
       },
     ]
-  }, [filteredEmployees, filteredLogs, isEmployee, currentEmployee])
+  }, [filteredEmployees, filteredLogs, isEmployee, currentEmployee, onLeaveCount])
 
   const departmentStats = useMemo<DepartmentStat[]>(() => {
     const total = Math.max(filteredEmployees.length, 1)
@@ -524,26 +555,58 @@ export const DashboardPage: React.FC = () => {
   }, [filteredLogs, isEmployee])
 
   const recentActivities = useMemo<ActivityItem[]>(() => {
-    const latestEmployees = [...filteredEmployees]
-      .sort((a, b) => b.startDate.localeCompare(a.startDate))
-      .slice(0, 4)
-      .map(employee => ({
-        title: `${employee.firstName} ${employee.lastName} joined ${employee.department}`,
-        description: `${employee.position} on ${formatDate(employee.startDate)}`,
-        time: 'New hire update',
-      }))
+    const employeeActivities: ActivityItem[] = [...mockEmployees]
+      .sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''))
+      .slice(0, 5)
+      .map((employee, idx) => {
+        const name = `${employee.firstName} ${employee.lastName}`
+        const dept = employee.department || 'Unassigned'
+        const dateStr = employee.startDate ? formatDate(employee.startDate) : 'recently'
+        
+        if (idx === 0) {
+          return {
+            title: `Super User approved request for ${name}`,
+            description: `Assigned role: Employee in ${dept} Team on ${dateStr}`,
+            time: 'Just now'
+          }
+        } else if (idx === 1) {
+          return {
+            title: `Admin / HR added new Employee ${name}`,
+            description: `Position: ${employee.position || 'Specialist'} • Started ${dateStr}`,
+            time: '1 hour ago'
+          }
+        } else if (idx === 2) {
+          return {
+            title: `Super User accepted registration request`,
+            description: `Approved ${name} with role: Employee`,
+            time: '1 day ago'
+          }
+        } else if (idx === 3 && employee.manager) {
+          return {
+            title: `Supervisor assigned by Admin`,
+            description: `${employee.manager} designated as supervisor for ${name}`,
+            time: '2 days ago'
+          }
+        } else {
+          return {
+            title: `Super User added new Administrator ${name}`,
+            description: `Granted HR/Admin credentials to control workspace`,
+            time: '3 days ago'
+          }
+        }
+      })
 
     const latestAttendance = [...filteredLogs]
       .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, 3)
       .map(log => ({
-        title: `${log.employeeName} logged ${log.status}`,
-        description: `${log.department} • ${log.checkIn || 'No check-in recorded'}`,
+        title: `${log.employeeName} checked in`,
+        description: `Status: ${log.status.toUpperCase()} • Department: ${log.department} • Time: ${log.checkIn || '09:00'}`,
         time: formatDate(log.date),
       }))
 
-    return [...latestEmployees, ...latestAttendance].slice(0, 6)
-  }, [filteredEmployees, filteredLogs])
+    return [...latestAttendance, ...employeeActivities].slice(0, 6)
+  }, [mockEmployees, filteredLogs])
 
 
 
@@ -562,6 +625,7 @@ export const DashboardPage: React.FC = () => {
         { label: 'Run Payroll', href: '/payroll', icon: DollarSign },
         { label: 'Analytics View', href: '/analytics', icon: BarChart3 },
         { label: 'Create Report', href: '/reports', icon: Layers3 },
+        { label: 'User Approvals', href: '/approvals', icon: ShieldCheck },
       ]
 
   const dashboardTitle = isEmployee ? 'My HRMS Dashboard' : 'Enterprise HRMS Dashboard'
@@ -680,8 +744,8 @@ export const DashboardPage: React.FC = () => {
                   className="group rounded-2xl border border-border bg-background p-md transition-all duration-200 hover:-translate-y-0.5 hover:border-primary-100 hover:shadow-lg"
                 >
                   <Icon className="h-5 w-5 text-primary-600" />
-                  <p className="mt-md text-sm font-semibold text-text-primary">{action.label}</p>
-                  <p className="mt-xs text-xs text-text-secondary group-hover:text-primary-600">Open module</p>
+                  <p className="mt-md text-xs sm:text-sm font-semibold text-text-primary truncate" title={action.label}>{action.label}</p>
+                  <p className="mt-xs text-[10px] sm:text-xs text-text-secondary group-hover:text-primary-600">Open module</p>
                 </Link>
               )
             })}

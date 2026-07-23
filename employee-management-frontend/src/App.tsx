@@ -22,12 +22,13 @@ import { AttendancePage } from '@/pages/AttendancePage'
 import { ReportsPage } from '@/pages/ReportsPage'
 import { LeavePage } from '@/pages/LeavePage'
 import { PayrollPage } from '@/pages/PayrollPage'
-import { LayoutDashboard, Users, Building2, Clock3, CalendarCheck2, DollarSign, FileText, ShieldCheck, Settings, UserCircle2, LogOut, Megaphone, CircleCheck } from 'lucide-react'
+import { LayoutDashboard, Users, Building2, Clock3, CalendarCheck2, DollarSign, FileText, ShieldCheck, Settings, UserCircle2, LogOut, Megaphone, CircleCheck, MessageSquare } from 'lucide-react'
 import { UserManagementPage } from '@/pages/UserManagementPage'
 import { ApprovalsPage } from '@/pages/ApprovalsPage'
 import { PendingApprovalPage } from '@/pages/PendingApprovalPage'
 import { DepartmentsPage } from '@/pages/DepartmentsPage'
 import { AnnouncementsPage } from '@/pages/AnnouncementsPage'
+import { TeamManagementPage } from '@/pages/TeamManagementPage'
 
 interface NavItemConfig {
   id: string
@@ -53,6 +54,7 @@ const superAdminNavigation: NavItemConfig[] = [
   { id: 'users', label: 'User Management', href: '/users', icon: ShieldCheck },
   { id: 'approvals', label: 'Approvals', href: '/approvals', icon: CircleCheck },
   { id: 'announcements', label: 'Announcements', href: '/announcements', icon: Megaphone },
+  { id: 'team', label: 'Team Management', href: '/team', icon: MessageSquare },
   { id: 'profile', label: 'Profile', href: '/profile', icon: UserCircle2 },
   { id: 'settings', label: 'Settings', href: '/settings', icon: Settings },
 ]
@@ -66,6 +68,7 @@ const hrNavigation: NavItemConfig[] = [
   { id: 'payroll', label: 'Payroll', href: '/payroll', icon: DollarSign },
   { id: 'reports', label: 'Reports', href: '/reports', icon: FileText },
   { id: 'announcements', label: 'Announcements', href: '/announcements', icon: Megaphone },
+  { id: 'team', label: 'Team Management', href: '/team', icon: MessageSquare },
   { id: 'profile', label: 'Profile', href: '/profile', icon: UserCircle2 },
   { id: 'settings', label: 'Settings', href: '/settings', icon: Settings },
 ]
@@ -77,6 +80,7 @@ const employeeNavigation: NavItemConfig[] = [
   { id: 'leave', label: 'My Leave', href: '/leave', icon: CalendarCheck2 },
   { id: 'payroll', label: 'My Payslips', href: '/payroll', icon: DollarSign },
   { id: 'announcements', label: 'Announcements', href: '/announcements', icon: Megaphone },
+  { id: 'team', label: 'My Team', href: '/team', icon: MessageSquare },
   { id: 'settings', label: 'Settings', href: '/settings', icon: Settings },
 ]
 
@@ -93,6 +97,7 @@ const routeToNavId: Record<string, string> = {
   '/settings': 'settings',
   '/profile': 'profile',
   '/announcements': 'announcements',
+  '/team': 'team',
 }
 
 function getNavIdFromPath(pathname: string) {
@@ -219,6 +224,7 @@ function AppLayout() {
               <Route path="/announcements" element={<AnnouncementsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/team" element={<TeamManagementPage />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </div>

@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowRight, BadgeCheck, CircleCheck, CircleX, Clock3, Search, ShieldCheck, Sparkles, X, Eye } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
+import { useDepartments } from '@/hooks/useDepartments'
 import { Badge } from '@/components/common/Badge'
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
@@ -36,12 +37,21 @@ function formatDate(value: string | null) {
 
 export const ApprovalsPage: React.FC = () => {
   const { users, fetchUsers, approveUser, rejectUser } = useAuth()
+  const { departments } = useDepartments()
   const [search, setSearch] = useState('')
   const [roleSelection, setRoleSelection] = useState<Record<string, UserRole>>({})
+  const [deptSelection, setDeptSelection] = useState<Record<string, string>>({})
   const [focusedUser, setFocusedUser] = useState<UserAccount | null>(null)
   
   const [confirmApprove, setConfirmApprove] = useState<UserAccount | null>(null)
   const [confirmReject, setConfirmReject] = useState<UserAccount | null>(null)
+
+  const departmentOptions = useMemo(() => {
+    return [
+      { value: 'Unassigned', label: 'No Department (Unassigned)' },
+      ...departments.map(d => ({ value: d.name, label: d.name }))
+    ]
+  }, [departments])
 
   React.useEffect(() => {
     fetchUsers()
@@ -59,7 +69,7 @@ export const ApprovalsPage: React.FC = () => {
   }), [pendingUsers.length, users])
 
   const approve = (user: UserAccount) => {
-    approveUser(user.id, roleSelection[user.id] || 'employee')
+    approveUser(user.id, roleSelection[user.id] || 'employee', deptSelection[user.id] || 'Unassigned')
     setConfirmApprove(null)
     setFocusedUser(null)
   }
@@ -87,12 +97,18 @@ export const ApprovalsPage: React.FC = () => {
               </p>
             </div>
             
-            <div className="mt-md">
+            <div className="mt-md space-y-md">
               <Select
                 label="Role Assignment"
                 value={roleSelection[confirmApprove.id] || 'employee'}
                 onChange={event => setRoleSelection(previous => ({ ...previous, [confirmApprove.id]: event.target.value as UserRole }))}
                 options={roleSelectOptions}
+              />
+              <Select
+                label="Department Assignment"
+                value={deptSelection[confirmApprove.id] || 'Unassigned'}
+                onChange={event => setDeptSelection(previous => ({ ...previous, [confirmApprove.id]: event.target.value }))}
+                options={departmentOptions}
               />
             </div>
 

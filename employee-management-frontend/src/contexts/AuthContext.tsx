@@ -12,7 +12,7 @@ interface AuthContextType {
   googleLogin: (credential: string) => Promise<UserAccount>
   register: (firstName: string, lastName: string, email: string, phone: string, password: string) => Promise<UserAccount>
   logout: () => void
-  approveUser: (userId: string, role: UserRole) => void
+  approveUser: (userId: string, role: UserRole, departmentName?: string) => Promise<void>
   rejectUser: (userId: string) => void
   updateUserRole: (userId: string, role: UserRole) => void
   toggleUserStatus: (userId: string) => void
@@ -187,7 +187,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(previousUser => (previousUser?.id === updatedUser.id ? updatedUser : previousUser))
   }
 
-  const approveUser = async (userId: string, role: UserRole) => {
+  const approveUser = async (userId: string, role: UserRole, departmentName?: string) => {
     try {
       const payload = {
         is_active: true,
@@ -196,16 +196,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       await apiClient.patch(`/api/v1/users/${userId}/`, payload)
       
+      // Update employee department if provided and valid
+      if (departmentName && departmentName !== 'Unassigned') {
+        try {
+          const empRes = await apiClient.get('/api/v1/employees/')
+          const currentAccount = users.find(account => account.id === userId)
+          const employee = empRes.data.results?.find((e: any) => e.email?.toLowerCase() === currentAccount?.email?.toLowerCase())
+          if (employee) {
+            await apiClient.patch(`/api/v1/employees/${employee.id}/`, {
+              department_name: departmentName
+            })
+          }
+        } catch (empErr) {
+          console.error('Failed to update employee department during approval', empErr)
+        }
+      }
+      
       const currentUser = users.find(account => account.id === userId)
       if (!currentUser) return
-      const updatedUser: UserAccount = { ...currentUser, role, approvalStatus: 'approved', accountStatus: 'active' }
+      const updatedUser: UserAccount = { ...currentUser, role, department: departmentName || 'Unassigned', approvalStatus: 'approved', accountStatus: 'active' }
       persistUser(updatedUser)
     } catch (err) {
       console.error('Failed to approve user', err)
       // Optimistic update for demo
       const currentUser = users.find(account => account.id === userId)
       if (currentUser) {
-        persistUser({ ...currentUser, role, approvalStatus: 'approved', accountStatus: 'active' })
+        persistUser({ ...currentUser, role, department: departmentName || 'Unassigned', approvalStatus: 'approved', accountStatus: 'active' })
       }
     }
   }

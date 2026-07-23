@@ -115,21 +115,22 @@ export const LeavePage: React.FC = () => {
             </Link>
           </div>
 
-          <div className="mt-lg grid grid-cols-1 gap-md sm:grid-cols-3">
+          <div className="mt-lg grid grid-cols-2 gap-md lg:grid-cols-4">
             {[
               { label: 'Available balance', value: `${leaveBalance} days`, icon: CalendarDays },
               { label: 'Pending requests', value: String(stats?.pending || 0), icon: Clock3 },
               { label: 'Approved leaves', value: String(stats?.approved || 0), icon: CheckCircle2 },
+              { label: 'Rejected requests', value: String(stats?.rejected || 0), icon: AlertCircle },
             ].map(item => {
               const Icon = item.icon
               return (
                 <div key={item.label} className="rounded-2xl border border-border bg-background p-md">
                   <div className="flex items-start justify-between gap-md">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">{item.label}</p>
-                      <p className="mt-sm text-3xl font-black text-text-primary">{item.value}</p>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary truncate">{item.label}</p>
+                      <p className="mt-sm text-2xl font-black text-text-primary sm:text-3xl">{item.value}</p>
                     </div>
-                    <Icon className="h-5 w-5 text-primary-600" />
+                    <Icon className="h-5 w-5 text-primary-600 shrink-0" />
                   </div>
                 </div>
               )

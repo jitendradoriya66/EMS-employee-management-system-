@@ -86,6 +86,8 @@ const PieChart: React.FC<PieChartProps> = ({ data, colors, selectedStatus, onSel
         />
         {slices.map((slice, idx) => {
           const item = data[idx]
+          if (item.value === 0) return null
+
           const statusVal = getStatusValue(item.name)
           const isSelected = selectedStatus === statusVal
           const isAnySelected = selectedStatus !== null
@@ -110,7 +112,7 @@ const PieChart: React.FC<PieChartProps> = ({ data, colors, selectedStatus, onSel
               fill="none"
               stroke={slice.color}
               strokeWidth={strokeWidth}
-              strokeDasharray={slice.length}
+              strokeDasharray={`${slice.length} ${circumference}`}
               strokeDashoffset={-slice.offset}
               className="cursor-pointer transition-all duration-300 origin-center"
               style={{
