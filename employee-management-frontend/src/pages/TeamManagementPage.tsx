@@ -19,7 +19,10 @@ import {
   createConversation,
   scheduleMeeting,
   fetchMeetings,
-  initiateCall
+  initiateCall,
+  answerCall,
+  rejectCall,
+  endCall
 } from '@/utils/communicationApi'
 
 export interface ChatMessage {
@@ -133,6 +136,7 @@ export const TeamManagementPage: React.FC = () => {
 
   // Call State (Simulator)
   const [activeCall, setActiveCall] = useState<{
+    id?: string
     type: 'voice' | 'video'
     status: 'ringing' | 'connected'
     partnerName: string
@@ -141,6 +145,7 @@ export const TeamManagementPage: React.FC = () => {
     isCameraOff: boolean
     isScreenSharing: boolean
     isHandRaised: boolean
+    isIncoming?: boolean
   } | null>(null)
 
   // Prevent body scrolling on laptop/desktop viewports
@@ -328,6 +333,7 @@ export const TeamManagementPage: React.FC = () => {
       if (data.call_data && String(data.call_data.host_id) !== String(user?.id)) {
         playSound('incoming')
         setActiveCall({
+          id: String(data.call_data.id),
           type: data.call_data.type,
           status: 'ringing',
           partnerName: data.call_data.host_name,
@@ -335,7 +341,8 @@ export const TeamManagementPage: React.FC = () => {
           isMuted: false,
           isCameraOff: false,
           isScreenSharing: false,
-          isHandRaised: false
+          isHandRaised: false,
+          isIncoming: true
         })
       }
     })
@@ -453,17 +460,21 @@ export const TeamManagementPage: React.FC = () => {
       isMuted: false,
       isCameraOff: false,
       isScreenSharing: false,
-      isHandRaised: false
+      isHandRaised: false,
+      isIncoming: false
     })
 
     playSound('calling')
 
     try {
       if (activeChatId) {
-        await initiateCall({
+        const callObj = await initiateCall({
           conversation: activeChatId,
           type
         })
+        if (callObj && callObj.id) {
+          setActiveCall(prev => prev ? { ...prev, id: String(callObj.id) } : null)
+        }
       }
     } catch (err) {
       console.error('Failed to register call on backend:', err)
@@ -1134,36 +1145,104 @@ export const TeamManagementPage: React.FC = () => {
 
               {/* Call Controls HUD */}
               <div className="flex items-center justify-center gap-sm sm:gap-md p-md sm:p-lg border-t border-slate-800 bg-slate-900 shrink-0">
-                <Button 
-                  variant="ghost" 
-                  onClick={() => setActiveCall(prev => prev ? { ...prev, isMuted: !prev.isMuted } : null)}
-                  className={`p-sm sm:p-md rounded-full shadow-md ${activeCall.isMuted ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-300'}`}
-                >
-                  {activeCall.isMuted ? <MicOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Mic className="h-4 w-4 sm:h-5 sm:w-5" />}
-                </Button>
-                {activeCall.type === 'video' && (
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => setActiveCall(prev => prev ? { ...prev, isCameraOff: !prev.isCameraOff } : null)}
-                    className={`p-sm sm:p-md rounded-full shadow-md ${activeCall.isCameraOff ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-300'}`}
-                  >
-                    {activeCall.isCameraOff ? <VideoOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Video className="h-4 w-4 sm:h-5 sm:w-5" />}
-                  </Button>
+                {activeCall.status === 'ringing' ? (
+                  activeCall.isIncoming ? (
+                    <>
+                      <Button 
+                        variant="primary" 
+                        onClick={async () => {
+                          try {
+                            if (activeCall.id) {
+                              await answerCall(activeCall.id)
+                            }
+                          } catch (err) {
+                            console.error(err)
+                          }
+                          setActiveCall(prev => prev ? { ...prev, status: 'connected' } : null)
+                          playSound('outgoing')
+                        }}
+                        className="px-lg py-sm rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg animate-bounce"
+                      >
+                        Answer
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        onClick={async () => {
+                          try {
+                            if (activeCall.id) {
+                              await rejectCall(activeCall.id)
+                            }
+                          } catch (err) {
+                            console.error(err)
+                          }
+                          setActiveCall(null)
+                        }}
+                        className="px-lg py-sm rounded-full bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm shadow-lg"
+                      >
+                        Decline
+                      </Button>
+                    </>
+                  ) : (
+                    <Button 
+                      variant="ghost" 
+                      onClick={async () => {
+                        try {
+                          if (activeCall.id) {
+                            await endCall(activeCall.id)
+                          }
+                        } catch (err) {
+                          console.error(err)
+                        }
+                        setActiveCall(null)
+                      }}
+                      className="px-lg py-sm rounded-full bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm shadow-lg"
+                    >
+                      Cancel Call
+                    </Button>
+                  )
+                ) : (
+                  <>
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => setActiveCall(prev => prev ? { ...prev, isMuted: !prev.isMuted } : null)}
+                      className={`p-sm sm:p-md rounded-full shadow-md ${activeCall.isMuted ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-300'}`}
+                    >
+                      {activeCall.isMuted ? <MicOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Mic className="h-4 w-4 sm:h-5 sm:w-5" />}
+                    </Button>
+                    {activeCall.type === 'video' && (
+                      <Button 
+                        variant="ghost" 
+                        onClick={() => setActiveCall(prev => prev ? { ...prev, isCameraOff: !prev.isCameraOff } : null)}
+                        className={`p-sm sm:p-md rounded-full shadow-md ${activeCall.isCameraOff ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-300'}`}
+                      >
+                        {activeCall.isCameraOff ? <VideoOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Video className="h-4 w-4 sm:h-5 sm:w-5" />}
+                      </Button>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => setActiveCall(prev => prev ? { ...prev, isHandRaised: !prev.isHandRaised } : null)}
+                      className={`p-sm sm:p-md rounded-full shadow-md ${activeCall.isHandRaised ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-300'}`}
+                    >
+                      <Hand className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      onClick={async () => {
+                        try {
+                          if (activeCall.id) {
+                            await endCall(activeCall.id)
+                          }
+                        } catch (err) {
+                          console.error(err)
+                        }
+                        setActiveCall(null)
+                      }}
+                      className="p-sm sm:p-md rounded-full shadow-md bg-rose-600 hover:bg-rose-700 text-white"
+                    >
+                      <PhoneOff className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </Button>
+                  </>
                 )}
-                <Button 
-                  variant="ghost" 
-                  onClick={() => setActiveCall(prev => prev ? { ...prev, isHandRaised: !prev.isHandRaised } : null)}
-                  className={`p-sm sm:p-md rounded-full shadow-md ${activeCall.isHandRaised ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-300'}`}
-                >
-                  <Hand className="h-4 w-4 sm:h-5 sm:w-5" />
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => setActiveCall(null)}
-                  className="p-sm sm:p-md rounded-full shadow-md bg-rose-600 hover:bg-rose-700 text-white"
-                >
-                  <PhoneOff className="h-4 w-4 sm:h-5 sm:w-5" />
-                </Button>
               </div>
             </motion.div>
           </div>

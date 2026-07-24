@@ -90,6 +90,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
             invited_user_id = serializer.validated_data['member_ids'][0]
             from django.contrib.auth import get_user_model
             invited_user = get_object_or_404(get_user_model(), id=invited_user_id)
+            
             conversation, created = ConversationService.get_or_create_direct_conversation(request.user, invited_user)
         else:
             # Group Conversation
