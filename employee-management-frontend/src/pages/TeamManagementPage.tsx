@@ -421,10 +421,10 @@ export const TeamManagementPage: React.FC = () => {
                   className={`flex items-center gap-sm p-sm rounded-xl cursor-pointer transition-all duration-200 border ${
                     activeChatId === emp.id && activeTab === 'chat'
                       ? 'bg-primary-50 dark:bg-primary-950/20 border-primary-200 dark:border-primary-800'
-                      : 'hover:bg-slate-100 dark:hover:bg-slate-800/40 border-transparent'
+                      : 'hover:bg-background border-transparent'
                   }`}
                 >
-                  <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-text-primary text-xs font-bold relative shrink-0">
+                  <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center text-text-primary text-xs font-bold relative shrink-0">
                     {emp.firstName[0]}{emp.lastName[0]}
                     <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border border-card bg-emerald-500" />
                   </div>
@@ -822,32 +822,32 @@ export const TeamManagementPage: React.FC = () => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-4xl overflow-hidden rounded-[2.5rem] border border-slate-800 bg-slate-900 shadow-2xl flex flex-col text-white h-[80vh]"
+              className="relative w-full max-w-4xl overflow-hidden rounded-3xl md:rounded-[2.5rem] border border-slate-800 bg-slate-900 shadow-2xl flex flex-col text-white h-[85vh] md:h-[80vh] m-xs"
             >
               {/* Call Header */}
-              <div className="flex items-center justify-between p-lg border-b border-slate-800">
-                <div className="flex items-center gap-sm">
-                  <div className="h-3 w-3 rounded-full bg-emerald-500 animate-pulse" />
-                  <div>
-                    <h3 className="text-md font-bold">{activeCall.partnerName}</h3>
-                    <p className="text-xs text-slate-400">
+              <div className="flex items-center justify-between p-md sm:p-lg border-b border-slate-800 gap-xs">
+                <div className="flex items-center gap-xs sm:gap-sm min-w-0">
+                  <div className="h-3 w-3 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <div className="min-w-0">
+                    <h3 className="text-sm sm:text-md font-bold truncate">{activeCall.partnerName}</h3>
+                    <p className="text-[10px] sm:text-xs text-slate-400 truncate">
                       {activeCall.status === 'ringing' ? 'Connecting Securely...' : `Live Session • ${Math.floor(activeCall.duration / 60)}:${String(activeCall.duration % 60).padStart(2, '0')}`}
                     </p>
                   </div>
                 </div>
-                <div className="px-md py-xs rounded-full bg-slate-800 text-xs font-semibold">
+                <div className="px-sm sm:px-md py-0.5 sm:py-xs rounded-full bg-slate-800 text-[10px] sm:text-xs font-semibold shrink-0">
                   Secure Call Channel
                 </div>
               </div>
 
               {/* Call Body */}
-              <div className="flex-1 bg-slate-950 flex items-center justify-center relative p-md">
+              <div className="flex-1 bg-slate-950 flex items-center justify-center relative p-xs sm:p-md overflow-hidden">
                 {activeCall.type === 'video' ? (
-                  <div className="grid grid-cols-2 gap-md w-full h-full">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-xs sm:gap-md w-full h-full overflow-y-auto md:overflow-hidden p-xs">
                     {/* Remote Stream Video */}
-                    <div className="relative rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center">
+                    <div className="relative rounded-xl sm:rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center min-h-[160px] md:min-h-0">
                       <div className="text-center space-y-md">
-                        <div className="h-20 w-20 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center text-4xl font-bold mx-auto">
+                        <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center text-3xl sm:text-4xl font-bold mx-auto">
                           {activeCall.partnerName[0]}
                         </div>
                         <p className="text-sm font-semibold">{activeCall.partnerName}</p>
@@ -857,77 +857,77 @@ export const TeamManagementPage: React.FC = () => {
                       </div>
                     </div>
                     {/* Local Stream Video */}
-                    <div className="relative rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center">
+                    <div className="relative rounded-xl sm:rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center min-h-[160px] md:min-h-0">
                       {activeCall.isCameraOff ? (
                         <div className="text-center space-y-md">
-                          <VideoOff className="h-10 w-10 text-slate-500 mx-auto" />
+                          <VideoOff className="h-8 w-8 sm:h-10 sm:w-10 text-slate-500 mx-auto" />
                           <p className="text-xs text-slate-500">Your Camera is Off</p>
                         </div>
                       ) : (
                         <div className="text-center space-y-md">
-                          <div className="h-20 w-20 rounded-full bg-primary/20 text-primary flex items-center justify-center text-4xl font-bold mx-auto">
+                          <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-primary/20 text-primary flex items-center justify-center text-3xl sm:text-4xl font-bold mx-auto">
                             ME
                           </div>
                           <p className="text-sm font-semibold">Self Stream (Host)</p>
                         </div>
                       )}
-                      <div className="absolute bottom-md left-md bg-slate-950/80 px-md py-xs rounded-lg text-xs">
+                      <div className="absolute bottom-sm left-sm bg-slate-950/80 px-sm py-0.5 rounded text-[10px] sm:text-xs">
                         Host Preview (Me)
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center space-y-lg">
-                    <div className="h-32 w-32 rounded-full bg-primary flex items-center justify-center text-white text-5xl font-black mx-auto shadow-2xl relative">
+                  <div className="text-center space-y-md sm:space-y-lg">
+                    <div className="h-24 w-24 sm:h-32 sm:w-32 rounded-full bg-primary flex items-center justify-center text-white text-4xl sm:text-5xl font-black mx-auto shadow-2xl relative">
                       {activeCall.partnerName[0]}
                       {/* Pulse soundwaves */}
                       <span className="absolute inset-0 rounded-full bg-primary-500/20 animate-ping" />
                     </div>
-                    <h3 className="text-2xl font-black">{activeCall.partnerName}</h3>
-                    <p className="text-xs text-slate-500">Voice Link Connection Established</p>
+                    <h3 className="text-xl sm:text-2xl font-black">{activeCall.partnerName}</h3>
+                    <p className="text-[10px] sm:text-xs text-slate-500">Voice Link Connection Established</p>
                   </div>
                 )}
 
                 {/* Hand Raised overlay */}
                 {activeCall.isHandRaised && (
-                  <div className="absolute top-md right-md bg-amber-500/90 text-slate-950 px-md py-sm rounded-full text-xs font-extrabold flex items-center gap-xs">
-                    <Hand className="h-4 w-4 animate-bounce" />
+                  <div className="absolute top-sm right-sm bg-amber-500/90 text-slate-950 px-sm py-xs rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-xs">
+                    <Hand className="h-3 w-3 sm:h-4 sm:w-4 animate-bounce" />
                     Hand Raised
                   </div>
                 )}
               </div>
 
               {/* Call Controls HUD */}
-              <div className="flex items-center justify-center gap-md p-lg border-t border-slate-800 bg-slate-900">
+              <div className="flex items-center justify-center gap-sm sm:gap-md p-md sm:p-lg border-t border-slate-800 bg-slate-900 shrink-0">
                 <Button 
                   variant="ghost" 
                   onClick={() => setActiveCall(prev => prev ? { ...prev, isMuted: !prev.isMuted } : null)}
-                  className={`p-md rounded-full shadow-md ${activeCall.isMuted ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-300'}`}
+                  className={`p-sm sm:p-md rounded-full shadow-md ${activeCall.isMuted ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-300'}`}
                 >
-                  {activeCall.isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                  {activeCall.isMuted ? <MicOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Mic className="h-4 w-4 sm:h-5 sm:w-5" />}
                 </Button>
                 {activeCall.type === 'video' && (
                   <Button 
                     variant="ghost" 
                     onClick={() => setActiveCall(prev => prev ? { ...prev, isCameraOff: !prev.isCameraOff } : null)}
-                    className={`p-md rounded-full shadow-md ${activeCall.isCameraOff ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-300'}`}
+                    className={`p-sm sm:p-md rounded-full shadow-md ${activeCall.isCameraOff ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-300'}`}
                   >
-                    {activeCall.isCameraOff ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
+                    {activeCall.isCameraOff ? <VideoOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Video className="h-4 w-4 sm:h-5 sm:w-5" />}
                   </Button>
                 )}
                 <Button 
                   variant="ghost" 
                   onClick={() => setActiveCall(prev => prev ? { ...prev, isHandRaised: !prev.isHandRaised } : null)}
-                  className={`p-md rounded-full shadow-md ${activeCall.isHandRaised ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-300'}`}
+                  className={`p-sm sm:p-md rounded-full shadow-md ${activeCall.isHandRaised ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-300'}`}
                 >
-                  <Hand className="h-5 w-5" />
+                  <Hand className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
                 <Button 
                   variant="ghost" 
                   onClick={() => setActiveCall(null)}
-                  className="p-md rounded-full shadow-md bg-rose-600 hover:bg-rose-700 text-white"
+                  className="p-sm sm:p-md rounded-full shadow-md bg-rose-600 hover:bg-rose-700 text-white"
                 >
-                  <PhoneOff className="h-5 w-5" />
+                  <PhoneOff className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               </div>
             </motion.div>
