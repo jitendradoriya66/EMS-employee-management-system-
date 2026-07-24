@@ -4,8 +4,8 @@ import apiClient from './apiClient'
 export const mapBackendEmployeeToFrontend = (backendEmp: any): Employee => {
   return {
     id: backendEmp.id.toString(),
-    firstName: backendEmp.firstName,
-    lastName: backendEmp.lastName,
+    firstName: backendEmp.first_name || backendEmp.firstName || '',
+    lastName: backendEmp.last_name || backendEmp.lastName || '',
     email: backendEmp.email,
     phone: backendEmp.phone || '',
     department: backendEmp.department || 'Unassigned',

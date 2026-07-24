@@ -564,7 +564,7 @@ export const TeamManagementPage: React.FC = () => {
                 >
                   <div className="flex items-center gap-sm min-w-0">
                     <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center text-text-primary text-xs font-bold relative shrink-0">
-                      {emp.firstName[0]}{emp.lastName[0]}
+                      {(emp.firstName?.[0] || '').toUpperCase()}{(emp.lastName?.[0] || '').toUpperCase()}
                       <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border border-card bg-emerald-500" />
                     </div>
                     <div className="min-w-0">
@@ -1021,7 +1021,7 @@ export const TeamManagementPage: React.FC = () => {
                     <div className="relative rounded-xl sm:rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center min-h-[160px] md:min-h-0">
                       <div className="text-center space-y-md">
                         <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center text-3xl sm:text-4xl font-bold mx-auto">
-                          {activeCall.partnerName[0]}
+                          {activeCall.partnerName?.[0]}
                         </div>
                         <p className="text-sm font-semibold">{activeCall.partnerName}</p>
                       </div>
@@ -1052,7 +1052,7 @@ export const TeamManagementPage: React.FC = () => {
                 ) : (
                   <div className="text-center space-y-md sm:space-y-lg">
                     <div className="h-24 w-24 sm:h-32 sm:w-32 rounded-full bg-primary flex items-center justify-center text-white text-4xl sm:text-5xl font-black mx-auto shadow-2xl relative">
-                      {activeCall.partnerName[0]}
+                      {activeCall.partnerName?.[0]}
                       {/* Pulse soundwaves */}
                       <span className="absolute inset-0 rounded-full bg-primary-500/20 animate-ping" />
                     </div>
