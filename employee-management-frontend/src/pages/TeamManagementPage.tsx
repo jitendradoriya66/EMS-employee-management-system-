@@ -159,14 +159,18 @@ export const TeamManagementPage: React.FC = () => {
     const loadMeetings = async () => {
       try {
         const res = await fetchMeetings()
-        setMeetings(res.map((m: any) => ({
-          id: m.id,
-          title: m.title,
-          time: new Date(m.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          date: new Date(m.start_time).toISOString().slice(0, 10),
-          attendees: m.attendances?.map((a: any) => a.user?.name) || [],
-          joinUrl: m.join_url || '#'
-        })))
+        if (Array.isArray(res)) {
+          setMeetings(res.map((m: any) => ({
+            id: m.id,
+            title: m.title,
+            time: new Date(m.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            date: new Date(m.start_time).toISOString().slice(0, 10),
+            attendees: m.attendances?.map((a: any) => a.user?.name) || [],
+            joinUrl: m.join_url || '#'
+          })))
+        } else {
+          setMeetings([])
+        }
       } catch (e) {
         console.error(e)
       }
@@ -365,14 +369,18 @@ export const TeamManagementPage: React.FC = () => {
       })
       
       const res = await fetchMeetings()
-      setMeetings(res.map((m: any) => ({
-        id: m.id,
-        title: m.title,
-        time: new Date(m.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        date: new Date(m.start_time).toISOString().slice(0, 10),
-        attendees: m.attendances?.map((a: any) => a.user?.name) || [],
-        joinUrl: m.join_url || '#'
-      })))
+      if (Array.isArray(res)) {
+        setMeetings(res.map((m: any) => ({
+          id: m.id,
+          title: m.title,
+          time: new Date(m.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          date: new Date(m.start_time).toISOString().slice(0, 10),
+          attendees: m.attendances?.map((a: any) => a.user?.name) || [],
+          joinUrl: m.join_url || '#'
+        })))
+      } else {
+        setMeetings([])
+      }
       setShowScheduleModal(false)
     } catch (e) {
       console.error(e)
