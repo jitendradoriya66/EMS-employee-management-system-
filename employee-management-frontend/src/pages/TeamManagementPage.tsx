@@ -89,6 +89,7 @@ export const TeamManagementPage: React.FC = () => {
 
   // Map Backend Conversations to Frontend ChatGroups
   const groups = useMemo(() => {
+    if (!Array.isArray(conversations)) return []
     return conversations.map(c => {
       const isDirect = c.type === 'direct'
       const otherMember = c.members?.find((m: any) => m.user?.id !== user?.id)
@@ -107,6 +108,7 @@ export const TeamManagementPage: React.FC = () => {
 
   // Map Backend Messages for active chat
   const activeChatMessages = useMemo(() => {
+    if (!Array.isArray(chatMessages)) return []
     return chatMessages.map((m: any) => ({
       id: m.id,
       senderId: m.sender?.id || 'temp',
@@ -381,11 +383,11 @@ export const TeamManagementPage: React.FC = () => {
   const { fetchUsers } = useAuth()
   const handleDmPartnerClick = async (partnerEmployee: any) => {
     const partnerEmail = partnerEmployee.email
-    const existingConv = conversations.find(c => {
+    const existingConv = Array.isArray(conversations) ? conversations.find(c => {
       if (c.type !== 'direct') return false
       const other = c.members?.find((m: any) => m.user?.email?.toLowerCase() === partnerEmail?.toLowerCase())
       return !!other
-    })
+    }) : null
 
     if (existingConv) {
       setActiveTab('chat')
