@@ -43,7 +43,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         await self.accept()
 
     async def disconnect(self, close_code):
-        if hasattr(self, 'user') and self.user.is_authenticated:
+        if hasattr(self, 'user') and self.user is not None and self.user.is_authenticated:
             # User is offline, update presence
             await self.update_user_online_status(self.user, is_online=False)
 

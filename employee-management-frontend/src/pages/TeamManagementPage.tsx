@@ -508,9 +508,11 @@ export const TeamManagementPage: React.FC = () => {
           <div className="space-y-sm">
             <div className="flex items-center justify-between px-xs">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-secondary">Channels</p>
-              <button onClick={() => setShowCreateModal(true)} className="text-primary hover:text-primary-600 transition-colors">
-                <Plus className="h-4 w-4" />
-              </button>
+              {!isEmployee && (
+                <button onClick={() => setShowCreateModal(true)} className="text-primary hover:text-primary-600 transition-colors">
+                  <Plus className="h-4 w-4" />
+                </button>
+              )}
             </div>
             <div className="space-y-xs">
               {filteredGroups.map(g => (
@@ -649,10 +651,12 @@ export const TeamManagementPage: React.FC = () => {
                       <h3 className="text-md font-bold text-text-primary">Today's Meeting Syncs</h3>
                       <p className="text-xs text-text-secondary">Low latency voice/video standups</p>
                     </div>
-                    <Button variant="secondary" onClick={() => setShowScheduleModal(true)} className="w-full sm:w-auto">
-                      <Plus className="h-4 w-4 mr-xs" />
-                      Schedule
-                    </Button>
+                    {!isEmployee && (
+                      <Button variant="secondary" onClick={() => setShowScheduleModal(true)} className="w-full sm:w-auto">
+                        <Plus className="h-4 w-4 mr-xs" />
+                        Schedule
+                      </Button>
+                    )}
                   </div>
 
                   <div className="space-y-sm">
@@ -880,10 +884,12 @@ export const TeamManagementPage: React.FC = () => {
                   <h2 className="text-lg font-bold text-text-primary">Interactive Meeting Schedule</h2>
                   <p className="text-sm text-text-secondary">Plan sprint discussions and standups</p>
                 </div>
-                <Button variant="primary" onClick={() => setShowScheduleModal(true)} className="w-full sm:w-auto">
-                  <Plus className="h-4 w-4 mr-xs" />
-                  Schedule Meeting
-                </Button>
+                {!isEmployee && (
+                  <Button variant="primary" onClick={() => setShowScheduleModal(true)} className="w-full sm:w-auto">
+                    <Plus className="h-4 w-4 mr-xs" />
+                    Schedule Meeting
+                  </Button>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
@@ -1110,7 +1116,7 @@ export const TeamManagementPage: React.FC = () => {
 
       {/* CREATE MODAL */}
       <AnimatePresence>
-        {showCreateModal && (
+        {showCreateModal && !isEmployee && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-md bg-slate-950/60 backdrop-blur-sm" onClick={() => setShowCreateModal(false)}>
             <motion.div
               initial={{ opacity: 0, scale: 0.98, y: 15 }}
@@ -1155,7 +1161,7 @@ export const TeamManagementPage: React.FC = () => {
 
       {/* SCHEDULE MEETING MODAL */}
       <AnimatePresence>
-        {showScheduleModal && (
+        {showScheduleModal && !isEmployee && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-md bg-slate-950/60 backdrop-blur-sm" onClick={() => setShowScheduleModal(false)}>
             <motion.div
               initial={{ opacity: 0, scale: 0.98, y: 15 }}

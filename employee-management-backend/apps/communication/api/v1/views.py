@@ -30,7 +30,8 @@ from apps.communication.permissions.custom import (
     IsConversationParticipant,
     IsGroupOwnerOrAdmin,
     IsHRRole,
-    IsEmployeeRole
+    IsEmployeeRole,
+    get_user_role
 )
 
 from apps.communication.services.conversation import ConversationService
@@ -71,6 +72,15 @@ class ConversationViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), IsConversationParticipant()]
         return super().get_permissions()
 
+    def destroy(self, request, *args, **kwargs):
+        role = get_user_role(request.user)
+        if role == 'employee':
+            return Response(
+                {"detail": "Employees do not have permission to delete conversations."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().destroy(request, *args, **kwargs)
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -83,6 +93,12 @@ class ConversationViewSet(viewsets.ModelViewSet):
             conversation, created = ConversationService.get_or_create_direct_conversation(request.user, invited_user)
         else:
             # Group Conversation
+            role = get_user_role(request.user)
+            if role == 'employee':
+                return Response(
+                    {"detail": "Employees do not have permission to create group conversations."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
             member_ids = serializer.validated_data.get('member_ids', [])
             conversation = ConversationService.create_group_conversation(
                 owner=request.user,
@@ -133,6 +149,12 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def archive(self, request, pk=None):
+        role = get_user_role(request.user)
+        if role == 'employee':
+            return Response(
+                {"detail": "Employees do not have permission to archive conversations."},
+                status=status.HTTP_403_FORBIDDEN
+            )
         conversation = self.get_object()
         ConversationService.archive_conversation(conversation.id, request.user)
         return Response({"message": "Conversation archived successfully."}, status=status.HTTP_200_OK)
@@ -249,6 +271,15 @@ class MeetingViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update']:
             return MeetingWriteSerializer
         return MeetingReadSerializer
+
+    def create(self, request, *args, **kwargs):
+        role = get_user_role(request.user)
+        if role == 'employee':
+            return Response(
+                {"detail": "Employees do not have permission to schedule meetings."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         invitee_ids = serializer.validated_data.get('invitee_ids', [])
