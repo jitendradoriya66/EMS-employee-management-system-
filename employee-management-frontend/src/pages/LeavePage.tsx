@@ -10,6 +10,7 @@ import { useLeaveRequests } from '@/hooks/useLeaveRequests'
 import { CircleCheck, CircleX } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { ModernPagination } from '@/components/common/ModernPagination'
+import { UnifiedLoader } from '@/components/common/UnifiedLoader'
 
 export const LeavePage: React.FC = () => {
   const { user } = useAuth()
@@ -101,6 +102,9 @@ export const LeavePage: React.FC = () => {
   }
 
   if (loading) {
+    if (isEmployee) {
+      return <UnifiedLoader message="Loading your leave applications..." />
+    }
     return (
       <div className="space-y-lg animate-pulse p-lg">
         <div className="h-10 w-1/3 bg-slate-200 dark:bg-slate-800 rounded-lg mb-lg" />

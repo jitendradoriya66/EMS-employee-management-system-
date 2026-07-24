@@ -13,8 +13,14 @@ import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
 import { Badge } from '@/components/common/Badge'
 import { ModernPagination } from '@/components/common/ModernPagination'
+import { useChat } from '@/hooks/useChat'
+import {
+  createConversation,
+  scheduleMeeting,
+  fetchMeetings
+} from '@/utils/communicationApi'
 
-interface ChatMessage {
+export interface ChatMessage {
   id: string
   senderId: string
   senderName: string
@@ -25,7 +31,7 @@ interface ChatMessage {
   attachments?: { name: string; size: string; type: string }[]
 }
 
-interface ChatGroup {
+export interface ChatGroup {
   id: string
   name: string
   description: string
@@ -43,7 +49,7 @@ interface MeetingItem {
   joinUrl: string
 }
 
-interface FileItem {
+export interface FileItem {
   id: string
   name: string
   size: string
@@ -69,13 +75,57 @@ export const TeamManagementPage: React.FC = () => {
   // Sub-Navigation Tab State
   const [activeTab, setActiveTab] = useState<'dashboard' | 'chat' | 'meetings' | 'files'>('dashboard')
   
-  // Real-Time Chat State
-  const [groups, setGroups] = useState<ChatGroup[]>([])
-  const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({})
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
-  const [activeChatType, setActiveChatType] = useState<'group' | 'dm'>('group')
   const [inputText, setInputText] = useState('')
-  
+
+  const {
+    conversations,
+    messages: chatMessages,
+    typingUsers: activeTypingUsers,
+    loadConversations,
+    sendMessage: sendChatMessage,
+    reactToMessage: reactChatEmoji
+  } = useChat(activeChatId)
+
+  // Map Backend Conversations to Frontend ChatGroups
+  const groups = useMemo(() => {
+    return conversations.map(c => {
+      const isDirect = c.type === 'direct'
+      const otherMember = c.members?.find((m: any) => m.user?.id !== user?.id)
+      const name = isDirect ? (otherMember?.user?.name || 'Private Chat') : (c.title || 'Group Chat')
+      const description = isDirect ? (otherMember?.user?.email || 'Direct Message') : (c.description || 'Group Discussion')
+      return {
+        id: c.id,
+        name,
+        description,
+        members: c.members?.map((m: any) => m.user?.id) || [],
+        createdAt: c.created_at,
+        isPinned: c.is_archived
+      }
+    })
+  }, [conversations, user?.id])
+
+  // Map Backend Messages for active chat
+  const activeChatMessages = useMemo(() => {
+    return chatMessages.map((m: any) => ({
+      id: m.id,
+      senderId: m.sender?.id || 'temp',
+      senderName: m.sender?.name || 'User',
+      senderRole: m.sender?.role || 'employee',
+      text: m.text || (m.file_path ? `[File: ${m.file_type}]` : ''),
+      timestamp: m.created_at,
+      reactions: (m.reactions?.map((r: any) => r.emoji) || []) as string[]
+    }))
+  }, [chatMessages])
+
+  // Mock messages lookup mapping compatibility
+  const messages = useMemo(() => {
+    if (!activeChatId) return {}
+    return {
+      [activeChatId]: activeChatMessages
+    }
+  }, [activeChatId, activeChatMessages])
+
   // Call State (Simulator)
   const [activeCall, setActiveCall] = useState<{
     type: 'voice' | 'video'
@@ -102,14 +152,26 @@ export const TeamManagementPage: React.FC = () => {
   }, [])
 
   // Meeting Schedule State & Pagination
-  const [meetings, setMeetings] = useState<MeetingItem[]>([
-    { id: 'meet-1', title: 'Daily Tech Standup', time: '10:00 AM - 10:30 AM', date: new Date().toISOString().slice(0, 10), attendees: ['Bob', 'Alice'], joinUrl: '#' },
-    { id: 'meet-2', title: 'Sprint Planning & Retro', time: '02:00 PM - 03:00 PM', date: new Date().toISOString().slice(0, 10), attendees: ['Bob', 'Alice', 'Charlie'], joinUrl: '#' },
-    { id: 'meet-3', title: 'Product UI Design Sync', time: '11:00 AM - 11:30 AM', date: new Date().toISOString().slice(0, 10), attendees: ['Alice', 'David'], joinUrl: '#' },
-    { id: 'meet-4', title: 'Backend Architecture Alignment', time: '04:00 PM - 04:45 PM', date: new Date().toISOString().slice(0, 10), attendees: ['Charlie', 'Bob'], joinUrl: '#' },
-    { id: 'meet-5', title: 'Marketing Campaign Launch Brief', time: '01:00 PM - 01:30 PM', date: new Date().toISOString().slice(0, 10), attendees: ['Emma', 'Bob'], joinUrl: '#' },
-    { id: 'meet-6', title: 'HR General Onboarding Session', time: '09:00 AM - 09:30 AM', date: new Date().toISOString().slice(0, 10), attendees: ['Alice', 'John'], joinUrl: '#' }
-  ])
+  const [meetings, setMeetings] = useState<MeetingItem[]>([])
+  
+  useEffect(() => {
+    const loadMeetings = async () => {
+      try {
+        const res = await fetchMeetings()
+        setMeetings(res.map((m: any) => ({
+          id: m.id,
+          title: m.title,
+          time: new Date(m.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          date: new Date(m.start_time).toISOString().slice(0, 10),
+          attendees: m.attendances?.map((a: any) => a.user?.name) || [],
+          joinUrl: m.join_url || '#'
+        })))
+      } catch (e) {
+        console.error(e)
+      }
+    }
+    loadMeetings()
+  }, [activeTab])
 
   // Sound effects synthesiser using native Web Audio API
   const playSound = (type: 'outgoing' | 'incoming' | 'calling') => {
@@ -143,19 +205,25 @@ export const TeamManagementPage: React.FC = () => {
     }
   }
 
-  const [files, setFiles] = useState<FileItem[]>(() => {
-    const stored = localStorage.getItem('ems_team_files_v2')
-    return stored ? JSON.parse(stored) : [
-      { id: 'f-1', name: 'UI_Design_Spec_v2.pdf', size: '4.2 MB', uploader: 'Alice Smith', uploadedAt: 'Today', type: 'pdf' },
-      { id: 'f-2', name: 'Workforce_Model.xlsx', size: '1.8 MB', uploader: 'Bob Johnson', uploadedAt: 'Yesterday', type: 'doc' },
-      { id: 'f-3', name: 'Banner_Mockup_Premium.png', size: '12.4 MB', uploader: 'Charlie Brown', uploadedAt: '3 days ago', type: 'image' },
-      { id: 'f-4', name: 'Quarterly_Strategy_Slides.pdf', size: '8.1 MB', uploader: 'David Miller', uploadedAt: '4 days ago', type: 'pdf' },
-      { id: 'f-5', name: 'Employee_Handbook_2026.docx', size: '2.3 MB', uploader: 'Emma Watson', uploadedAt: '5 days ago', type: 'doc' },
-      { id: 'f-6', name: 'Production_Log_Dump.txt', size: '1.1 MB', uploader: 'Alice Smith', uploadedAt: 'Last week', type: 'doc' },
-      { id: 'f-7', name: 'Sprint_Burndown_Chart.png', size: '3.4 MB', uploader: 'Charlie Brown', uploadedAt: 'Last week', type: 'image' },
-      { id: 'f-8', name: 'Security_Audit_Report.pdf', size: '5.9 MB', uploader: 'David Miller', uploadedAt: '2 weeks ago', type: 'pdf' }
-    ]
-  })
+  const files = useMemo(() => {
+    return chatMessages
+      .filter((m: any) => m.file_path)
+      .map((m: any) => {
+        const pathParts = m.file_path.split('/')
+        const name = pathParts[pathParts.length - 1] || 'attachment'
+        let ext = 'doc'
+        if (name.endsWith('.pdf')) ext = 'pdf'
+        else if (name.endsWith('.png') || name.endsWith('.jpg') || name.endsWith('.jpeg')) ext = 'image'
+        return {
+          id: m.id,
+          name,
+          size: '1.2 MB',
+          uploader: m.sender?.name || 'User',
+          uploadedAt: new Date(m.created_at).toLocaleDateString(),
+          type: ext as 'pdf' | 'doc' | 'image'
+        }
+      })
+  }, [chatMessages])
 
   // Pagination states
   const [meetingPage, setMeetingPage] = useState(1)
@@ -163,7 +231,10 @@ export const TeamManagementPage: React.FC = () => {
 
   // Functional search & typing states
   const [searchQuery, setSearchQuery] = useState('')
-  const [typingUser, setTypingUser] = useState<string | null>(null)
+  const typingUser = useMemo(() => {
+    const typingNames = Object.keys(activeTypingUsers).filter(name => activeTypingUsers[name])
+    return typingNames.length > 0 ? typingNames[0] : null
+  }, [activeTypingUsers])
   const [unreads, setUnreads] = useState<Record<string, number>>({})
 
   // Modals & Panels Control
@@ -187,65 +258,6 @@ export const TeamManagementPage: React.FC = () => {
     return () => clearInterval(interval)
   }, [activeCall])
 
-  // Initialize and persist mock chats
-  useEffect(() => {
-    const savedGroups = localStorage.getItem('ems_chat_groups_v2')
-    const savedMessages = localStorage.getItem('ems_chat_messages_v2')
-
-    if (savedGroups) {
-      setGroups(JSON.parse(savedGroups))
-    } else {
-      const initialGroups: ChatGroup[] = [
-        {
-          id: 'grp-all',
-          name: 'Company Announcements Feed',
-          description: 'General communication feed for all departments.',
-          members: employees.map(e => e.id),
-          createdAt: new Date().toISOString(),
-          isPinned: true
-        },
-        {
-          id: 'grp-tech',
-          name: 'Tech & Engineering Sync',
-          description: 'Collaboration channel for engineers and developers.',
-          members: employees.filter(e => e.department === 'Engineering').map(e => e.id),
-          createdAt: new Date().toISOString()
-        }
-      ]
-      setGroups(initialGroups)
-      localStorage.setItem('ems_chat_groups_v2', JSON.stringify(initialGroups))
-    }
-
-    if (savedMessages) {
-      setMessages(JSON.parse(savedMessages))
-    } else {
-      const initialMessages: Record<string, ChatMessage[]> = {
-        'grp-all': [
-          {
-            id: 'm1',
-            senderId: 'system',
-            senderName: 'HR Specialist',
-            senderRole: 'admin_hr',
-            text: 'Welcome to the Workforce Hub general feed! Feel free to ask questions here.',
-            timestamp: new Date(Date.now() - 3600000).toISOString()
-          }
-        ]
-      }
-      setMessages(initialMessages)
-      localStorage.setItem('ems_chat_messages_v2', JSON.stringify(initialMessages))
-    }
-  }, [employees])
-
-  const activeChatDetails = useMemo(() => {
-    if (!activeChatId) return null
-    if (activeChatType === 'group') {
-      return groups.find(g => g.id === activeChatId)
-    } else {
-      const partner = employees.find(e => e.id === activeChatId)
-      return partner ? { name: `${partner.firstName} ${partner.lastName}`, description: `${partner.position} • ${partner.department}` } : null
-    }
-  }, [activeChatId, activeChatType, groups, employees])
-
   // Reset unread count for current active chat
   useEffect(() => {
     if (activeChatId) {
@@ -253,57 +265,10 @@ export const TeamManagementPage: React.FC = () => {
     }
   }, [activeChatId])
 
-  // Background message generator simulation
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (Math.random() > 0.45) return
-      
-      const colleagues = ['Alice Smith', 'Bob Johnson', 'Charlie Brown', 'David Miller', 'Emma Watson']
-      const randomName = colleagues[Math.floor(Math.random() * colleagues.length)]
-      
-      setTypingUser(randomName)
-      
-      setTimeout(() => {
-        setTypingUser(null)
-        
-        const targetGroup = groups[Math.floor(Math.random() * groups.length)]
-        if (!targetGroup) return
-        
-        const newMsg: ChatMessage = {
-          id: `msg-sim-${Date.now()}`,
-          senderId: `emp-sim-${Math.random().toString(36).substring(7)}`,
-          senderName: randomName,
-          senderRole: 'Team Collaborator',
-          text: [
-            "Hey! Did anyone see the latest design specs?",
-            "Just uploaded a new workbook in the Files tab.",
-            "I'm working on the mobile updates now. Should compile clean.",
-            "We have a sync standup scheduled later today.",
-            "Great effort on the release sprint guys!"
-          ][Math.floor(Math.random() * 5)],
-          timestamp: new Date().toISOString()
-        }
-
-        setMessages(prev => {
-          const currentMsgs = prev[targetGroup.id] || []
-          const updated = { ...prev, [targetGroup.id]: [...currentMsgs, newMsg] }
-          localStorage.setItem('ems_chat_messages_v2', JSON.stringify(updated))
-          return updated
-        })
-
-        playSound('incoming')
-
-        if (activeChatId !== targetGroup.id) {
-          setUnreads(prev => ({
-            ...prev,
-            [targetGroup.id]: (prev[targetGroup.id] || 0) + 1
-          }))
-        }
-      }, 2500)
-    }, 45000)
-
-    return () => clearInterval(interval)
-  }, [groups, activeChatId])
+  const activeChatDetails = useMemo(() => {
+    if (!activeChatId) return null
+    return groups.find(g => g.id === activeChatId)
+  }, [activeChatId, groups])
 
   // Filter contacts for DMs based on search query
   const dmPartners = useMemo(() => {
@@ -323,26 +288,20 @@ export const TeamManagementPage: React.FC = () => {
     return groups.filter(g => g.name.toLowerCase().includes(searchQuery.toLowerCase()))
   }, [groups, searchQuery])
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0]
     if (!uploadedFile) return
     
-    const newFile: FileItem = {
-      id: `f-${Date.now()}`,
-      name: uploadedFile.name,
-      size: `${(uploadedFile.size / (1024 * 1024)).toFixed(1)} MB`,
-      uploader: user?.name || 'Current User',
-      uploadedAt: 'Just now',
-      type: uploadedFile.name.endsWith('.pdf') ? 'pdf' : uploadedFile.name.endsWith('.png') || uploadedFile.name.endsWith('.jpg') ? 'image' : 'doc'
+    try {
+      await sendChatMessage(
+        `Sent an attachment: ${uploadedFile.name}`,
+        `/media/uploads/${uploadedFile.name}`,
+        uploadedFile.name.endsWith('.pdf') ? 'pdf' : 'doc'
+      )
+      playSound('outgoing')
+    } catch (err) {
+      console.error(err)
     }
-    
-    setFiles(prev => {
-      const updated = [newFile, ...prev]
-      localStorage.setItem('ems_team_files_v2', JSON.stringify(updated))
-      return updated
-    })
-    
-    playSound('outgoing')
   }
 
   // Scroll to bottom helper
@@ -357,72 +316,97 @@ export const TeamManagementPage: React.FC = () => {
   const handleSendMessage = (textOverride?: string) => {
     const textToSend = textOverride || inputText
     if (!textToSend.trim() || !activeChatId) return
-
-    const newMsg: ChatMessage = {
-      id: Math.random().toString(36).substring(7),
-      senderId: currentEmployeeId,
-      senderName: user?.name || 'User',
-      senderRole: role,
-      text: textToSend,
-      timestamp: new Date().toISOString(),
-      reactions: []
-    }
-
-    const updated = {
-      ...messages,
-      [activeChatId]: [...(messages[activeChatId] || []), newMsg]
-    }
-    setMessages(updated)
-    localStorage.setItem('ems_chat_messages_v2', JSON.stringify(updated))
+    sendChatMessage(textToSend)
     setInputText('')
     playSound('outgoing')
   }
 
   const handleAddReaction = (msgId: string, emoji: string) => {
-    if (!activeChatId) return
-    const updatedMsgs = (messages[activeChatId] || []).map(msg => {
-      if (msg.id === msgId) {
-        const reactions = msg.reactions || []
-        return {
-          ...msg,
-          reactions: reactions.includes(emoji) ? reactions.filter(r => r !== emoji) : [...reactions, emoji]
-        }
-      }
-      return msg
-    })
-    const updated = { ...messages, [activeChatId]: updatedMsgs }
-    setMessages(updated)
-    localStorage.setItem('ems_chat_messages_v2', JSON.stringify(updated))
+    reactChatEmoji(msgId, emoji)
   }
 
-  const handleCreateGroup = () => {
+  const handleCreateGroup = async () => {
     if (!groupForm.name.trim()) return
-    const newGroup: ChatGroup = {
-      id: `grp-${Math.random().toString(36).substring(7)}`,
-      name: groupForm.name,
-      description: groupForm.description,
-      members: [...groupForm.members, currentEmployeeId],
-      createdAt: new Date().toISOString()
+    try {
+      await createConversation({
+        type: 'group',
+        title: groupForm.name,
+        description: groupForm.description,
+        member_ids: groupForm.members
+      })
+      loadConversations()
+      setShowCreateModal(false)
+      setGroupForm({ name: '', description: '', members: [] })
+    } catch (e) {
+      console.error(e)
     }
-    const updated = [...groups, newGroup]
-    setGroups(updated)
-    localStorage.setItem('ems_chat_groups_v2', JSON.stringify(updated))
-    setShowCreateModal(false)
-    setGroupForm({ name: '', description: '', members: [] })
   }
 
-  const handleScheduleMeeting = () => {
+  const handleScheduleMeeting = async () => {
     if (!meetingForm.title.trim()) return
-    const newMeet: MeetingItem = {
-      id: `meet-${Math.random().toString(36).substring(7)}`,
-      title: meetingForm.title,
-      time: meetingForm.time,
-      date: meetingForm.date,
-      attendees: meetingForm.attendees,
-      joinUrl: '#'
+    try {
+      // Parse dates safely
+      let timeStr = meetingForm.time
+      if (timeStr.includes('AM') || timeStr.includes('PM')) {
+        // Convert '10:00 AM' to 24h format
+        const [time, modifier] = timeStr.split(' ')
+        let [hours, minutes] = time.split(':')
+        if (hours === '12') hours = '00'
+        if (modifier === 'PM') hours = String(parseInt(hours, 10) + 12)
+        timeStr = `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`
+      }
+      const startTime = new Date(`${meetingForm.date}T${timeStr}`).toISOString()
+      
+      await scheduleMeeting({
+        title: meetingForm.title,
+        start_time: startTime,
+        invitee_ids: meetingForm.attendees
+      })
+      
+      const res = await fetchMeetings()
+      setMeetings(res.map((m: any) => ({
+        id: m.id,
+        title: m.title,
+        time: new Date(m.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        date: new Date(m.start_time).toISOString().slice(0, 10),
+        attendees: m.attendances?.map((a: any) => a.user?.name) || [],
+        joinUrl: m.join_url || '#'
+      })))
+      setShowScheduleModal(false)
+    } catch (e) {
+      console.error(e)
     }
-    setMeetings(prev => [...prev, newMeet])
-    setShowScheduleModal(false)
+  }
+
+  const { fetchUsers } = useAuth()
+  const handleDmPartnerClick = async (partnerEmployee: any) => {
+    const partnerEmail = partnerEmployee.email
+    const existingConv = conversations.find(c => {
+      if (c.type !== 'direct') return false
+      const other = c.members?.find((m: any) => m.user?.email?.toLowerCase() === partnerEmail?.toLowerCase())
+      return !!other
+    })
+
+    if (existingConv) {
+      setActiveTab('chat')
+      setActiveChatId(existingConv.id)
+    } else {
+      try {
+        const allUsers = await fetchUsers()
+        const targetUser = allUsers.find((u: any) => u.email?.toLowerCase() === partnerEmail?.toLowerCase())
+        if (targetUser) {
+          const newConv = await createConversation({
+            type: 'direct',
+            member_ids: [targetUser.id]
+          })
+          loadConversations()
+          setActiveTab('chat')
+          setActiveChatId(newConv.id)
+        }
+      } catch (e) {
+        console.error('Failed to start direct conversation', e)
+      }
+    }
   }
 
   const handleTriggerCall = (type: 'voice' | 'video', partnerName: string) => {
@@ -526,7 +510,6 @@ export const TeamManagementPage: React.FC = () => {
                   onClick={() => {
                     setActiveTab('chat')
                     setActiveChatId(g.id)
-                    setActiveChatType('group')
                   }}
                   className={`flex items-center justify-between p-sm rounded-xl cursor-pointer transition-all duration-200 group border ${
                     activeChatId === g.id && activeTab === 'chat'
@@ -563,11 +546,7 @@ export const TeamManagementPage: React.FC = () => {
               {dmPartners.map(emp => (
                 <div
                   key={emp.id}
-                  onClick={() => {
-                    setActiveTab('chat')
-                    setActiveChatId(emp.id)
-                    setActiveChatType('dm')
-                  }}
+                  onClick={() => handleDmPartnerClick(emp)}
                   className={`flex items-center justify-between p-sm rounded-xl cursor-pointer transition-all duration-200 border ${
                     activeChatId === emp.id && activeTab === 'chat'
                       ? 'bg-primary-50 dark:bg-primary-950/20 border-primary-200 dark:border-primary-800'
@@ -791,9 +770,9 @@ export const TeamManagementPage: React.FC = () => {
                                 
                                 {msg.reactions && msg.reactions.length > 0 && (
                                   <div className="flex flex-wrap gap-xs mt-sm">
-                                    {Array.from(new Set(msg.reactions)).map(emoji => (
+                                    {Array.from(new Set(msg.reactions)).map((emoji: string) => (
                                       <span key={emoji} className="inline-flex items-center gap-xs rounded-full bg-slate-100 dark:bg-slate-800 px-sm py-0.5 text-[10px] text-text-secondary border border-border">
-                                        {emoji} {msg.reactions?.filter(r => r === emoji).length}
+                                        {emoji} {msg.reactions?.filter((r: string) => r === emoji).length}
                                       </span>
                                     ))}
                                   </div>

@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import apiClient from '@/utils/apiClient';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function useDepartments() {
+  const { user } = useAuth();
+  const isEmployee = (user?.role ?? 'employee') === 'employee';
   const [departments, setDepartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -56,8 +59,12 @@ export function useDepartments() {
   };
 
   useEffect(() => {
-    fetchDepartments();
-  }, []);
+    if (!isEmployee) {
+      fetchDepartments();
+    } else {
+      setLoading(false);
+    }
+  }, [isEmployee]);
 
   return { departments, loading, fetchDepartments, addDepartment, updateDepartment, deleteDepartment };
 }

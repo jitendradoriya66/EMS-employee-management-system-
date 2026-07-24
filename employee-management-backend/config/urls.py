@@ -17,6 +17,10 @@ urlpatterns = [
         include("apps.users.api.v1.urls"),
     ),
     path(
+        "api/v1/communication/",
+        include("apps.communication.api.v1.urls"),
+    ),
+    path(
         "api/v1/departments/",
         include("apps.departments.api.v1.urls"),
     ),

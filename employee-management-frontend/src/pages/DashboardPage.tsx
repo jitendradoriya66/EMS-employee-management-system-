@@ -10,6 +10,7 @@ import { useTasks } from '@/hooks/useTasks'
 import { useHolidays } from '@/hooks/useHolidays'
 import { useDepartments } from '@/hooks/useDepartments'
 import apiClient from '@/utils/apiClient'
+import { UnifiedLoader } from '@/components/common/UnifiedLoader'
 
 type RangeKey = '7d' | '30d' | '90d' | 'all'
 
@@ -634,6 +635,9 @@ export const DashboardPage: React.FC = () => {
     : 'Monitor headcount, attendance, payroll, leave, and hiring activity from a single premium control center.'
 
   if (employeesLoading || announcementsLoading || tasksLoading || holidaysLoading) {
+    if (isEmployee) {
+      return <UnifiedLoader message="Loading your HRMS dashboard..." />
+    }
     return (
       <div className="space-y-lg animate-pulse p-lg">
         <div className="h-28 bg-slate-200 dark:bg-slate-800 rounded-3xl mb-lg" />

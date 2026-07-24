@@ -7,6 +7,7 @@ import { formatCurrency } from '@/utils/helpers'
 import { useAuth } from '@/contexts/AuthContext'
 import { PayslipModal } from '@/components/payroll/PayslipModal'
 import { ModernPagination } from '@/components/common/ModernPagination'
+import { UnifiedLoader } from '@/components/common/UnifiedLoader'
 
 export const PayrollPage: React.FC = () => {
   const { user } = useAuth()
@@ -46,11 +47,16 @@ export const PayrollPage: React.FC = () => {
   const totalMyPayslipsPages = Math.max(1, Math.ceil(employeeTotalCount / itemsPerPage));
   const totalPayslipsPages = Math.max(1, Math.ceil(adminTotalCount / itemsPerPage));
 
-  if (loading && !employeePayslips.length && !adminPayslips.length) return (
-    <div className="flex h-64 items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
-    </div>
-  );
+  if (loading && !employeePayslips.length && !adminPayslips.length) {
+    if (isEmployee) {
+      return <UnifiedLoader message="Loading your payslip history..." />
+    }
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+      </div>
+    );
+  }
 
   if (isEmployee) {
     return (

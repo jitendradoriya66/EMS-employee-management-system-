@@ -44,6 +44,18 @@ class EmployeeListSerializer(serializers.ModelSerializer):
             return f"{obj.manager.user.first_name} {obj.manager.user.last_name}"
         return None
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            user = request.user
+            is_admin = user.is_staff or getattr(user, 'role', 'employee') != 'employee'
+            # If the user is not an admin, and they are viewing someone else's record:
+            if not is_admin and instance.user != user:
+                data.pop('salary', None)
+                data.pop('performance_score', None)
+        return data
+
     def get_projects(self, obj):
         assignments = obj.project_assignments.select_related('project').all()
         return [

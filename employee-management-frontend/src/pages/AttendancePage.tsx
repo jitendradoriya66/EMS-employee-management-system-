@@ -5,6 +5,7 @@ import { useAttendance } from '@/hooks/useAttendance'
 import { useAuth } from '@/contexts/AuthContext'
 import { ModernPagination } from '@/components/common/ModernPagination'
 import { useDebounce } from '@/hooks'
+import { UnifiedLoader } from '@/components/common/UnifiedLoader'
 
 type AttendanceStatus = 'present' | 'late' | 'leave'
 
@@ -128,6 +129,9 @@ export const AttendancePage: React.FC = () => {
   }, [backendStats])
 
   if (loading) {
+    if (isEmployee) {
+      return <UnifiedLoader message="Loading your attendance logs..." />
+    }
     return (
       <div className="space-y-lg animate-pulse p-lg">
         <div className="h-10 w-1/3 bg-slate-200 dark:bg-slate-800 rounded-lg mb-lg" />

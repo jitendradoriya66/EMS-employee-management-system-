@@ -7,6 +7,7 @@ import { Alert } from '@/components/common/Alert'
 import { Input } from '@/components/common/Input'
 import { useAuth } from '@/contexts/AuthContext'
 import { formatDistanceToNow } from 'date-fns'
+import { UnifiedLoader } from '@/components/common/UnifiedLoader'
 
 export const AnnouncementsPage: React.FC = () => {
   const { announcements, loading, markAllAsRead, broadcastAnnouncement } = useAnnouncements()
@@ -33,7 +34,7 @@ export const AnnouncementsPage: React.FC = () => {
   }
 
   if (loading) {
-    return <div className="p-xl text-center text-text-secondary animate-pulse">Loading announcements...</div>
+    return <UnifiedLoader message="Loading announcements..." />
   }
 
   return (
