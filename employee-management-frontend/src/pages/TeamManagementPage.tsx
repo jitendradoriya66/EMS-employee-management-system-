@@ -5,7 +5,7 @@ import {
   Phone, Video, Calendar, FolderOpen, 
   Pin, Bell, Sparkles, Smile, 
   Paperclip, Mic, VideoOff, MicOff, PhoneOff, Hand,
-  Eye, Download, Info
+  Eye, Download, Info, ArrowLeft
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useEmployees } from '@/hooks/useEmployees'
@@ -298,9 +298,11 @@ export const TeamManagementPage: React.FC = () => {
   }
 
   return (
-    <div className="flex h-[calc(100vh-140px)] gap-md relative overflow-hidden bg-background text-text-primary">
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)] lg:h-[calc(100vh-140px)] gap-md relative overflow-hidden bg-background text-text-primary">
       {/* Persistent Left Sidebar */}
-      <div className="w-80 flex flex-col rounded-3xl border border-border bg-card p-md shadow-sm no-print">
+      <div className={`w-full lg:w-80 flex-col rounded-3xl border border-border bg-card p-md shadow-sm no-print ${
+        activeTab === 'chat' && activeChatId !== null ? 'hidden lg:flex' : 'flex'
+      }`}>
         {/* Workspace Title & Search */}
         <div className="flex items-center justify-between gap-sm mb-md px-sm">
           <div className="flex items-center gap-xs">
@@ -417,7 +419,9 @@ export const TeamManagementPage: React.FC = () => {
       </div>
 
       {/* Main Workspace Frame */}
-      <div className="flex-1 flex flex-col rounded-3xl bg-slate-50/40 dark:bg-slate-900/10 overflow-hidden relative border border-border/50">
+      <div className={`flex-1 flex-col rounded-3xl bg-slate-50/40 dark:bg-slate-900/10 overflow-hidden relative border border-border/50 ${
+        activeTab === 'chat' && activeChatId === null ? 'hidden lg:flex' : 'flex'
+      }`}>
         
         {/* Dynamic Navigation rendering */}
         <AnimatePresence mode="wait">
@@ -547,9 +551,18 @@ export const TeamManagementPage: React.FC = () => {
                   <div className="flex-1 flex flex-col overflow-hidden">
                     {/* Header */}
                     <div className="flex-shrink-0 flex items-center justify-between border-b border-border bg-card/60 backdrop-blur-md px-lg py-md">
-                      <div className="min-w-0">
-                        <h4 className="text-md font-bold text-text-primary truncate">{activeChatDetails?.name}</h4>
-                        <p className="text-xs text-text-secondary truncate mt-xs">{activeChatDetails?.description}</p>
+                      <div className="flex items-center gap-sm min-w-0">
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => setActiveChatId(null)} 
+                          className="lg:hidden p-xs mr-xs shrink-0"
+                        >
+                          <ArrowLeft className="h-5 w-5 text-text-primary" />
+                        </Button>
+                        <div className="min-w-0">
+                          <h4 className="text-md font-bold text-text-primary truncate">{activeChatDetails?.name}</h4>
+                          <p className="text-xs text-text-secondary truncate mt-xs">{activeChatDetails?.description}</p>
+                        </div>
                       </div>
                       <div className="flex items-center gap-sm">
                         <Button variant="ghost" onClick={() => handleTriggerCall('voice', activeChatDetails?.name || 'Call')} className="p-xs">
@@ -641,7 +654,7 @@ export const TeamManagementPage: React.FC = () => {
 
                   {/* Context Right drawer */}
                   {showRightPanel && (
-                    <div className="w-72 border-l border-border bg-card/40 backdrop-blur-md p-md flex flex-col gap-lg overflow-y-auto no-print">
+                    <div className="w-72 border-l border-border bg-card/40 backdrop-blur-md p-md flex flex-col gap-lg overflow-y-auto no-print hidden xl:flex">
                       <div>
                         <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary mb-sm">Channel Information</h4>
                         <p className="text-sm font-semibold text-text-primary">{activeChatDetails?.name}</p>
