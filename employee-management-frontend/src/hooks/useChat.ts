@@ -139,7 +139,12 @@ export function useChat(activeConversationId: string | null) {
     })
 
     const unsubMsg = socketManager.on('message', (data) => {
-      if (data.message && data.message.conversation === activeConversationId) {
+      const msgConvoId = typeof data.message?.conversation === 'object'
+        ? String(data.message.conversation?.id)
+        : String(data.message?.conversation)
+      const currentConvoId = String(activeConversationId)
+
+      if (data.message && msgConvoId === currentConvoId) {
         setMessages((prev) => {
           // Prevent duplicates if already added optimistically
           if (prev.some((m) => m.id === data.message.id)) return prev

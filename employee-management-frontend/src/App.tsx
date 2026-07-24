@@ -228,7 +228,7 @@ function AppLayout() {
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </div>
-          <Footer />
+          {location.pathname !== '/team' && <Footer />}
         </main>
       </div>
     </div>

@@ -43,6 +43,24 @@ class MessageService:
             # Touch conversation to update ordering
             conversation.save(update_fields=['updated_at'])
 
+        try:
+            from asgiref.sync import async_to_sync
+            from channels.layers import get_channel_layer
+            from apps.communication.serializers.message import MessageReadSerializer
+            
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                message_data = MessageReadSerializer(message).data
+                async_to_sync(channel_layer.group_send)(
+                    f"conversation_{conversation.id}",
+                    {
+                        "type": "chat.message",
+                        "message": message_data
+                    }
+                )
+        except Exception:
+            pass
+
         return message
 
     @staticmethod

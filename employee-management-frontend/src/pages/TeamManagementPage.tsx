@@ -80,6 +80,7 @@ export const TeamManagementPage: React.FC = () => {
   const {
     conversations,
     messages: chatMessages,
+    loading: messagesLoading,
     typingUsers: activeTypingUsers,
     loadConversations,
     sendMessage: sendChatMessage,
@@ -751,54 +752,71 @@ export const TeamManagementPage: React.FC = () => {
 
                     {/* Message list */}
                     <div className="flex-1 overflow-y-auto p-lg space-y-md scrollbar-thin">
-                      {(messages[activeChatId] || []).map((msg) => {
-                        const isMyMessage = msg.senderId === currentEmployeeId
-                        return (
-                          <div key={msg.id} className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
-                            <div className="group relative max-w-[70%]">
-                              {/* Reactions drawer */}
-                              <div className="absolute -top-3 right-0 opacity-0 group-hover:opacity-100 transition-opacity bg-card shadow-lg rounded-full border border-border px-xs py-0.5 flex gap-1 z-10">
-                                {['👍', '🔥', '🎉', '❤️'].map(emoji => (
-                                  <button 
-                                    key={emoji} 
-                                    onClick={() => handleAddReaction(msg.id, emoji)}
-                                    className="hover:scale-125 transition-transform px-1 text-xs"
-                                  >
-                                    {emoji}
-                                  </button>
-                                ))}
-                              </div>
-
-                              <div className={`rounded-2xl p-md shadow-sm border ${
-                                isMyMessage
-                                  ? 'bg-primary-600 text-white border-primary-700 rounded-tr-none'
-                                  : 'bg-card text-text-primary border-border rounded-tl-none'
-                              }`}>
-                                {!isMyMessage && (
-                                  <div className="flex items-center gap-xs text-[10px] font-bold text-primary mb-1 uppercase tracking-wider">
-                                    {msg.senderName} ({msg.senderRole.replace('_', ' ')})
-                                  </div>
-                                )}
-                                <p className="text-sm break-words leading-relaxed">{msg.text}</p>
-                                
-                                {msg.reactions && msg.reactions.length > 0 && (
-                                  <div className="flex flex-wrap gap-xs mt-sm">
-                                    {Array.from(new Set(msg.reactions)).map((emoji: string) => (
-                                      <span key={emoji} className="inline-flex items-center gap-xs rounded-full bg-slate-100 dark:bg-slate-800 px-sm py-0.5 text-[10px] text-text-secondary border border-border">
-                                        {emoji} {msg.reactions?.filter((r: string) => r === emoji).length}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-
-                                <p className={`text-[9px] mt-xs text-right ${isMyMessage ? 'text-white/70' : 'text-text-secondary'}`}>
-                                  {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </p>
-                              </div>
+                      {messagesLoading ? (
+                        Array.from({ length: 4 }).map((_, i) => (
+                          <div key={i} className={`flex items-start gap-sm max-w-lg ${i % 2 === 0 ? '' : 'ml-auto flex-row-reverse'}`}>
+                            <div className="h-9 w-9 rounded-full bg-slate-200 dark:bg-slate-800 animate-pulse shrink-0" />
+                            <div className="space-y-xs min-w-[120px]">
+                              <div className="h-3 w-16 bg-slate-200 dark:bg-slate-800 animate-pulse rounded" />
+                              <div className="h-12 w-[240px] bg-slate-200 dark:bg-slate-800 animate-pulse rounded-2xl" />
                             </div>
                           </div>
-                        )
-                      })}
+                        ))
+                      ) : (messages[activeChatId] || []).length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-center p-lg">
+                          <MessageSquare className="h-12 w-12 text-text-secondary mb-sm animate-bounce" />
+                          <p className="text-sm font-semibold text-text-primary">No messages yet</p>
+                          <p className="text-xs text-text-secondary mt-xs">Send a message to start the conversation!</p>
+                        </div>
+                      ) : (
+                        (messages[activeChatId] || []).map((msg) => {
+                          const isMyMessage = msg.senderId === currentEmployeeId
+                          return (
+                            <div key={msg.id} className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
+                              <div className="group relative max-w-[70%]">
+                                {/* Reactions drawer */}
+                                <div className="absolute -top-3 right-0 opacity-0 group-hover:opacity-100 transition-opacity bg-card shadow-lg rounded-full border border-border px-xs py-0.5 flex gap-1 z-10">
+                                  {['👍', '🔥', '🎉', '❤️'].map(emoji => (
+                                    <button 
+                                      key={emoji} 
+                                      onClick={() => handleAddReaction(msg.id, emoji)}
+                                      className="hover:scale-125 transition-transform"
+                                    >
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
+                                <div className={`p-md rounded-2xl border ${
+                                  isMyMessage 
+                                    ? 'bg-primary text-white border-primary-600 rounded-tr-none' 
+                                    : 'bg-card text-text-primary border-border rounded-tl-none'
+                                }`}>
+                                  {!isMyMessage && (
+                                    <div className="text-[10px] font-bold text-primary mb-xs">
+                                      {msg.senderName} ({msg.senderRole.replace('_', ' ')})
+                                    </div>
+                                  )}
+                                  <p className="text-sm break-words leading-relaxed">{msg.text}</p>
+                                  
+                                  {msg.reactions && msg.reactions.length > 0 && (
+                                    <div className="flex flex-wrap gap-xs mt-sm">
+                                      {Array.from(new Set(msg.reactions)).map((emoji: string) => (
+                                        <span key={emoji} className="inline-flex items-center gap-xs rounded-full bg-slate-100 dark:bg-slate-800 px-sm py-0.5 text-[10px] text-text-secondary border border-border">
+                                          {emoji} {msg.reactions?.filter((r: string) => r === emoji).length}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  <p className={`text-[9px] mt-xs text-right ${isMyMessage ? 'text-white/70' : 'text-text-secondary'}`}>
+                                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })
+                      )}
                       {typingUser && (
                         <div className="flex items-center gap-xs text-xs text-text-secondary italic bg-background/40 backdrop-blur-sm rounded-xl px-md py-sm border border-border/40 w-fit max-w-[70%] animate-pulse">
                           <div className="flex gap-0.5 mr-xs shrink-0">
