@@ -431,10 +431,10 @@ export const TeamManagementPage: React.FC = () => {
               initial={{ opacity: 0, y: 10 }} 
               animate={{ opacity: 1, y: 0 }} 
               exit={{ opacity: 0 }}
-              className="flex-1 overflow-y-auto p-lg space-y-lg"
+              className="flex-1 overflow-y-auto p-sm sm:p-lg space-y-sm sm:space-y-lg"
             >
               {/* Welcome Card */}
-              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-600 via-primary-500 to-indigo-600 p-xl text-white shadow-lg">
+              <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-primary-600 via-primary-500 to-indigo-600 p-md sm:p-xl text-white shadow-lg">
                 <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-white/5 blur-3xl pointer-events-none" />
                 <div className="max-w-xl space-y-sm">
                   <div className="inline-flex items-center gap-sm rounded-full bg-white/10 px-md py-xs text-xs font-semibold text-cyan-300">
@@ -475,13 +475,13 @@ export const TeamManagementPage: React.FC = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-lg">
                 
                 {/* Schedule Card */}
-                <div className="lg:col-span-2 card p-lg space-y-md border border-border bg-card">
-                  <div className="flex justify-between items-center">
+                <div className="lg:col-span-2 card p-sm sm:p-lg space-y-sm sm:space-y-md border border-border bg-card">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-sm">
                     <div>
                       <h3 className="text-md font-bold text-text-primary">Today's Meeting Syncs</h3>
                       <p className="text-xs text-text-secondary">Low latency voice/video standups</p>
                     </div>
-                    <Button variant="secondary" onClick={() => setShowScheduleModal(true)}>
+                    <Button variant="secondary" onClick={() => setShowScheduleModal(true)} className="w-full sm:w-auto">
                       <Plus className="h-4 w-4 mr-xs" />
                       Schedule
                     </Button>
@@ -489,17 +489,17 @@ export const TeamManagementPage: React.FC = () => {
 
                   <div className="space-y-sm">
                     {meetings.map(meet => (
-                      <div key={meet.id} className="flex justify-between items-center p-md border border-border rounded-2xl bg-slate-50/50 dark:bg-slate-900/10">
-                        <div className="flex gap-sm items-center">
-                          <div className="p-xs bg-primary-100 dark:bg-primary-900/40 text-primary rounded-xl">
+                      <div key={meet.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-md p-md border border-border rounded-2xl bg-slate-50/50 dark:bg-slate-900/10">
+                        <div className="flex gap-sm items-center min-w-0">
+                          <div className="p-xs bg-primary-100 dark:bg-primary-900/40 text-primary rounded-xl shrink-0">
                             <Calendar className="h-5 w-5" />
                           </div>
-                          <div>
-                            <p className="text-sm font-semibold text-text-primary">{meet.title}</p>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-text-primary truncate">{meet.title}</p>
                             <p className="text-xs text-text-secondary">{meet.time}</p>
                           </div>
                         </div>
-                        <Button variant="primary" onClick={() => handleTriggerCall('video', 'Tech Sprint Group')} className="gap-sm">
+                        <Button variant="primary" onClick={() => handleTriggerCall('video', 'Tech Sprint Group')} className="w-full sm:w-auto gap-sm justify-center">
                           <Video className="h-4 w-4" />
                           Join Call
                         </Button>
@@ -509,7 +509,7 @@ export const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* Team announcements */}
-                <div className="card p-lg space-y-md border border-border bg-card">
+                <div className="card p-sm sm:p-lg space-y-sm sm:space-y-md border border-border bg-card">
                   <h3 className="text-md font-bold text-text-primary">Colleague Birthdays</h3>
                   <div className="space-y-md text-sm text-text-secondary">
                     <div className="flex gap-sm items-center p-xs border-b border-border">
@@ -695,14 +695,14 @@ export const TeamManagementPage: React.FC = () => {
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }}
-              className="flex-1 overflow-y-auto p-lg space-y-md"
+              className="flex-1 overflow-y-auto p-sm sm:p-lg space-y-sm sm:space-y-md"
             >
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-sm">
                 <div>
                   <h2 className="text-lg font-bold text-text-primary">Interactive Meeting Schedule</h2>
                   <p className="text-sm text-text-secondary">Plan sprint discussions and standups</p>
                 </div>
-                <Button variant="primary" onClick={() => setShowScheduleModal(true)}>
+                <Button variant="primary" onClick={() => setShowScheduleModal(true)} className="w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-xs" />
                   Schedule Meeting
                 </Button>
@@ -738,7 +738,7 @@ export const TeamManagementPage: React.FC = () => {
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }}
-              className="flex-1 overflow-y-auto p-lg space-y-md"
+              className="flex-1 overflow-y-auto p-sm sm:p-lg space-y-sm sm:space-y-md"
             >
               <div>
                 <h2 className="text-lg font-bold text-text-primary">Shared Team Files</h2>
@@ -930,9 +930,9 @@ export const TeamManagementPage: React.FC = () => {
                 />
               </div>
 
-              <div className="flex gap-sm justify-end pt-sm border-t border-border mt-md">
-                <Button variant="secondary" onClick={() => setShowCreateModal(false)}>Cancel</Button>
-                <Button variant="primary" onClick={handleCreateGroup}>Create Channel</Button>
+              <div className="flex flex-col-reverse sm:flex-row gap-sm justify-end pt-sm border-t border-border mt-md">
+                <Button variant="secondary" onClick={() => setShowCreateModal(false)} className="w-full sm:w-auto justify-center">Cancel</Button>
+                <Button variant="primary" onClick={handleCreateGroup} className="w-full sm:w-auto justify-center">Create Channel</Button>
               </div>
             </motion.div>
           </div>
@@ -975,9 +975,9 @@ export const TeamManagementPage: React.FC = () => {
                 />
               </div>
 
-              <div className="flex gap-sm justify-end pt-sm border-t border-border mt-md">
-                <Button variant="secondary" onClick={() => setShowScheduleModal(false)}>Cancel</Button>
-                <Button variant="primary" onClick={handleScheduleMeeting}>Schedule Meeting</Button>
+              <div className="flex flex-col-reverse sm:flex-row gap-sm justify-end pt-sm border-t border-border mt-md">
+                <Button variant="secondary" onClick={() => setShowScheduleModal(false)} className="w-full sm:w-auto justify-center">Cancel</Button>
+                <Button variant="primary" onClick={handleScheduleMeeting} className="w-full sm:w-auto justify-center">Schedule Meeting</Button>
               </div>
             </motion.div>
           </div>
