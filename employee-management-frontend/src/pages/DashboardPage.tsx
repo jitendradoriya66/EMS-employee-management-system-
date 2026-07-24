@@ -555,7 +555,7 @@ export const DashboardPage: React.FC = () => {
   }, [filteredLogs, isEmployee])
 
   const recentActivities = useMemo<ActivityItem[]>(() => {
-    const employeeActivities: ActivityItem[] = [...mockEmployees]
+    const employeeActivities = [...mockEmployees]
       .sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''))
       .slice(0, 5)
       .map((employee, idx) => {
@@ -563,36 +563,33 @@ export const DashboardPage: React.FC = () => {
         const dept = employee.department || 'Unassigned'
         const dateStr = employee.startDate ? formatDate(employee.startDate) : 'recently'
         
-        if (idx === 0) {
-          return {
-            title: `Super User approved request for ${name}`,
-            description: `Assigned role: Employee in ${dept} Team on ${dateStr}`,
-            time: 'Just now'
-          }
-        } else if (idx === 1) {
-          return {
-            title: `Admin / HR added new Employee ${name}`,
-            description: `Position: ${employee.position || 'Specialist'} • Started ${dateStr}`,
-            time: '1 hour ago'
-          }
+        let title = `Super User approved request for ${name}`
+        let description = `Assigned role: Employee in ${dept} Team on ${dateStr}`
+        let time = 'Just now'
+
+        if (idx === 1) {
+          title = `Admin / HR added new Employee ${name}`
+          description = `Position: ${employee.position || 'Specialist'} • Started ${dateStr}`
+          time = '1 hour ago'
         } else if (idx === 2) {
-          return {
-            title: `Super User accepted registration request`,
-            description: `Approved ${name} with role: Employee`,
-            time: '1 day ago'
-          }
+          title = `Super User accepted registration request`
+          description = `Approved ${name} with role: Employee`
+          time = '1 day ago'
         } else if (idx === 3 && employee.manager) {
-          return {
-            title: `Supervisor assigned by Admin`,
-            description: `${employee.manager} designated as supervisor for ${name}`,
-            time: '2 days ago'
-          }
-        } else {
-          return {
-            title: `Super User added new Administrator ${name}`,
-            description: `Granted HR/Admin credentials to control workspace`,
-            time: '3 days ago'
-          }
+          title = `Supervisor assigned by Admin`
+          description = `${employee.manager} designated as supervisor for ${name}`
+          time = '2 days ago'
+        } else if (idx >= 4) {
+          title = `Super User added new Administrator ${name}`
+          description = `Granted HR/Admin credentials to control workspace`
+          time = '3 days ago'
+        }
+
+        return {
+          title,
+          description,
+          time,
+          date: employee.startDate || ''
         }
       })
 
@@ -603,9 +600,12 @@ export const DashboardPage: React.FC = () => {
         title: `${log.employeeName} checked in`,
         description: `Status: ${log.status.toUpperCase()} • Department: ${log.department} • Time: ${log.checkIn || '09:00'}`,
         time: formatDate(log.date),
+        date: log.date,
       }))
 
-    return [...latestAttendance, ...employeeActivities].slice(0, 6)
+    return [...latestAttendance, ...employeeActivities]
+      .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+      .slice(0, 6)
   }, [mockEmployees, filteredLogs])
 
 
@@ -633,6 +633,24 @@ export const DashboardPage: React.FC = () => {
     ? 'Review your attendance, leave, payroll, and company announcements from one personal workspace.'
     : 'Monitor headcount, attendance, payroll, leave, and hiring activity from a single premium control center.'
 
+  if (employeesLoading || announcementsLoading || tasksLoading || holidaysLoading) {
+    return (
+      <div className="space-y-lg animate-pulse p-lg">
+        <div className="h-28 bg-slate-200 dark:bg-slate-800 rounded-3xl mb-lg" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-md">
+          <div className="h-24 bg-slate-200 dark:bg-slate-800 rounded-2xl" />
+          <div className="h-24 bg-slate-200 dark:bg-slate-800 rounded-2xl" />
+          <div className="h-24 bg-slate-200 dark:bg-slate-800 rounded-2xl" />
+          <div className="h-24 bg-slate-200 dark:bg-slate-800 rounded-2xl" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-lg">
+          <div className="lg:col-span-2 h-96 bg-slate-200 dark:bg-slate-800 rounded-3xl" />
+          <div className="h-96 bg-slate-200 dark:bg-slate-800 rounded-3xl" />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -640,7 +658,6 @@ export const DashboardPage: React.FC = () => {
       transition={{ duration: 0.35 }}
       className="space-y-lg"
     >
-      {(employeesLoading || announcementsLoading || tasksLoading || holidaysLoading) && <div className="p-xl text-center text-text-secondary">Loading dashboard data...</div>}
       <div className="flex flex-col gap-md rounded-3xl border border-border bg-card p-lg shadow-lg shadow-slate-900/5 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-2xl space-y-md">
           <div className="inline-flex items-center gap-sm rounded-full border border-white/10 bg-slate-950 px-md py-xs text-xs font-semibold text-cyan-300 shadow-sm dark:border-white/10 dark:bg-slate-950">

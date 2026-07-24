@@ -13,19 +13,20 @@ export const ProfilePage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [formData, setFormData] = useState({
-    firstName: 'John',
-    lastName: 'Doe',
-    email: user?.email || '',
-    phone: '+1 (555) 123-4567',
-    department: 'Engineering',
-    designation: 'Senior Developer',
-    joinDate: '2022-01-15',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    department: '',
+    designation: '',
+    joinDate: '',
   })
 
-  const { employees } = useEmployees()
+  const { employees, loading } = useEmployees()
   const { updateUserDetails, updateCurrentUser } = useAuth()
 
   const employeeProfile = useMemo(() => {
+    if (loading) return null
     const found = employees.find(employee => employee.email === user?.email)
     if (found) return found
     
@@ -48,7 +49,7 @@ export const ProfilePage: React.FC = () => {
       }
     }
     return null
-  }, [user, employees])
+  }, [user, employees, loading])
 
   React.useEffect(() => {
     if (employeeProfile) {
@@ -153,6 +154,20 @@ export const ProfilePage: React.FC = () => {
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 },
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-lg animate-pulse p-lg">
+        <div className="h-10 w-1/3 bg-slate-200 dark:bg-slate-800 rounded-lg mb-lg" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-md mb-lg">
+          <div className="h-24 bg-slate-200 dark:bg-slate-800 rounded-2xl" />
+          <div className="h-24 bg-slate-200 dark:bg-slate-800 rounded-2xl" />
+          <div className="h-24 bg-slate-200 dark:bg-slate-800 rounded-2xl" />
+        </div>
+        <div className="h-96 bg-slate-200 dark:bg-slate-800 rounded-3xl" />
+      </div>
+    )
   }
 
   if (!employeeProfile) {

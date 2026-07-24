@@ -127,6 +127,21 @@ export const AttendancePage: React.FC = () => {
     }))
   }, [backendStats])
 
+  if (loading) {
+    return (
+      <div className="space-y-lg animate-pulse p-lg">
+        <div className="h-10 w-1/3 bg-slate-200 dark:bg-slate-800 rounded-lg mb-lg" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-md mb-lg">
+          <div className="h-24 bg-slate-200 dark:bg-slate-800 rounded-2xl" />
+          <div className="h-24 bg-slate-200 dark:bg-slate-800 rounded-2xl" />
+          <div className="h-24 bg-slate-200 dark:bg-slate-800 rounded-2xl" />
+          <div className="h-24 bg-slate-200 dark:bg-slate-800 rounded-2xl" />
+        </div>
+        <div className="h-96 bg-slate-200 dark:bg-slate-800 rounded-3xl" />
+      </div>
+    )
+  }
+
   return (
     <motion.div className="space-y-lg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-md">
