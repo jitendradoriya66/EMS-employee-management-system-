@@ -11,9 +11,9 @@ class ChatSocketManager {
   constructor() {
     const isSecure = window.location.protocol === 'https:';
     const defaultHost = isSecure ? 'wss://localhost:8000' : 'ws://localhost:8000';
-    const host = import.meta.env.VITE_API_URL 
-      ? import.meta.env.VITE_API_URL.replace(/^http/, isSecure ? 'wss' : 'ws') 
-      : defaultHost;
+    let host = import.meta.env.VITE_API_URL || defaultHost;
+    // Safely convert http/https to ws/wss without duplicating 's'
+    host = host.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:');
     this.url = `${host}/ws/communication/chat/`;
   }
 
