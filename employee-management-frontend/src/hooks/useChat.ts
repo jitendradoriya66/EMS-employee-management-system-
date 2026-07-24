@@ -8,8 +8,10 @@ import {
   markMessageRead as readApiMessage
 } from '@/utils/communicationApi'
 import { socketManager } from '@/utils/websocket'
+import { useAuth } from '@/contexts/AuthContext'
 
 export function useChat(activeConversationId: string | null) {
+  const { user, isAuthenticated } = useAuth()
   const [conversations, setConversations] = useState<any[]>([])
   const [messages, setMessages] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
@@ -128,6 +130,8 @@ export function useChat(activeConversationId: string | null) {
 
   // Setup WebSockets & subscriptions
   useEffect(() => {
+    if (!isAuthenticated || !user) return
+
     socketManager.connect()
 
     const unsubStatus = socketManager.on('status', (data) => {
@@ -179,20 +183,22 @@ export function useChat(activeConversationId: string | null) {
       unsubTyping()
       unsubReceipt()
     }
-  }, [activeConversationId, loadConversations])
+  }, [activeConversationId, loadConversations, isAuthenticated, user])
 
   // Retrieve messages when active convo changes
   useEffect(() => {
-    if (activeConversationId) {
+    if (activeConversationId && isAuthenticated && user) {
       loadMessages(activeConversationId)
       setTypingUsers({})
     }
-  }, [activeConversationId, loadMessages])
+  }, [activeConversationId, loadMessages, isAuthenticated, user])
 
   // Initial load
   useEffect(() => {
-    loadConversations()
-  }, [loadConversations])
+    if (isAuthenticated && user) {
+      loadConversations()
+    }
+  }, [isAuthenticated, user, loadConversations])
 
   return {
     conversations,
