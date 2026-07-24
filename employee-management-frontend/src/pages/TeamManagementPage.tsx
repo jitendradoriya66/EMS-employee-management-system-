@@ -260,6 +260,30 @@ export const TeamManagementPage: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
+  const localStreamRef = useRef<MediaStream | null>(null)
+  const localVideoRef = useRef<HTMLVideoElement | null>(null)
+
+  useEffect(() => {
+    if (activeCall && activeCall.status === 'connected') {
+      navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: activeCall.type === 'video'
+      }).then(stream => {
+        localStreamRef.current = stream
+        if (localVideoRef.current && activeCall.type === 'video') {
+          localVideoRef.current.srcObject = stream
+          localVideoRef.current.play().catch(err => console.error("Video play error:", err))
+        }
+      }).catch(err => {
+        console.error("Failed to access media devices:", err)
+      })
+    } else if (!activeCall) {
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop())
+        localStreamRef.current = null
+      }
+    }
+  }, [activeCall?.status, activeCall?.type])
   
   // Call timer simulation
   useEffect(() => {
@@ -1110,14 +1134,14 @@ export const TeamManagementPage: React.FC = () => {
                           <p className="text-xs text-slate-500">Your Camera is Off</p>
                         </div>
                       ) : (
-                        <div className="text-center space-y-md">
-                          <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-primary/20 text-primary flex items-center justify-center text-3xl sm:text-4xl font-bold mx-auto">
-                            ME
-                          </div>
-                          <p className="text-sm font-semibold">Self Stream (Host)</p>
-                        </div>
+                        <video 
+                          ref={localVideoRef} 
+                          muted 
+                          playsInline 
+                          className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
+                        />
                       )}
-                      <div className="absolute bottom-sm left-sm bg-slate-950/80 px-sm py-0.5 rounded text-[10px] sm:text-xs">
+                      <div className="absolute bottom-sm left-sm bg-slate-950/80 px-sm py-0.5 rounded text-[10px] sm:text-xs z-10">
                         Host Preview (Me)
                       </div>
                     </div>
@@ -1204,7 +1228,15 @@ export const TeamManagementPage: React.FC = () => {
                   <>
                     <Button 
                       variant="ghost" 
-                      onClick={() => setActiveCall(prev => prev ? { ...prev, isMuted: !prev.isMuted } : null)}
+                      onClick={() => {
+                        const nextMuted = !activeCall.isMuted
+                        setActiveCall(prev => prev ? { ...prev, isMuted: nextMuted } : null)
+                        if (localStreamRef.current) {
+                          localStreamRef.current.getAudioTracks().forEach(track => {
+                            track.enabled = !nextMuted
+                          })
+                        }
+                      }}
                       className={`p-sm sm:p-md rounded-full shadow-md ${activeCall.isMuted ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-300'}`}
                     >
                       {activeCall.isMuted ? <MicOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Mic className="h-4 w-4 sm:h-5 sm:w-5" />}
@@ -1212,7 +1244,15 @@ export const TeamManagementPage: React.FC = () => {
                     {activeCall.type === 'video' && (
                       <Button 
                         variant="ghost" 
-                        onClick={() => setActiveCall(prev => prev ? { ...prev, isCameraOff: !prev.isCameraOff } : null)}
+                        onClick={() => {
+                          const nextCameraOff = !activeCall.isCameraOff
+                          setActiveCall(prev => prev ? { ...prev, isCameraOff: nextCameraOff } : null)
+                          if (localStreamRef.current) {
+                            localStreamRef.current.getVideoTracks().forEach(track => {
+                              track.enabled = !nextCameraOff
+                            })
+                          }
+                        }}
                         className={`p-sm sm:p-md rounded-full shadow-md ${activeCall.isCameraOff ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-300'}`}
                       >
                         {activeCall.isCameraOff ? <VideoOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Video className="h-4 w-4 sm:h-5 sm:w-5" />}

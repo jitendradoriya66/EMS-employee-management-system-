@@ -101,6 +101,17 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                         "status": "read"
                     }
                 )
+        elif event_type == 'rtc_signal':
+            signal_data = content.get('signal_data')
+            await self.channel_layer.group_send(
+                f"conversation_{conversation_id}",
+                {
+                    "type": "chat.rtc_signal",
+                    "conversation_id": conversation_id,
+                    "sender_id": str(self.user.id),
+                    "signal_data": signal_data
+                }
+            )
 
     # Group event handlers
     async def chat_typing(self, event):
