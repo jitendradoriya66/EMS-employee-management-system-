@@ -43,10 +43,12 @@ class MessageReadSerializer(serializers.ModelSerializer):
         return None
 
 class MessageWriteSerializer(serializers.ModelSerializer):
+    sender = UserMiniSerializer(read_only=True)
+
     class Meta:
         model = Message
-        fields = ('id', 'conversation', 'text', 'file_path', 'file_type', 'reply_to')
-        read_only_fields = ('id',)
+        fields = ('id', 'conversation', 'sender', 'text', 'file_path', 'file_type', 'reply_to', 'created_at')
+        read_only_fields = ('id', 'sender', 'created_at')
 
     def validate(self, attrs):
         text = attrs.get('text')

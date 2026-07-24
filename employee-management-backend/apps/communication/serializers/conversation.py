@@ -29,10 +29,11 @@ class ConversationMemberSerializer(serializers.ModelSerializer):
 
 class ConversationListSerializer(serializers.ModelSerializer):
     member_count = serializers.IntegerField(source='members.count', read_only=True)
+    members = ConversationMemberSerializer(many=True, read_only=True)
 
     class Meta:
         model = Conversation
-        fields = ('id', 'type', 'title', 'description', 'is_archived', 'member_count', 'created_at', 'updated_at')
+        fields = ('id', 'type', 'title', 'description', 'is_archived', 'member_count', 'members', 'created_at', 'updated_at')
 
 class ConversationDetailSerializer(serializers.ModelSerializer):
     members = ConversationMemberSerializer(many=True, read_only=True)

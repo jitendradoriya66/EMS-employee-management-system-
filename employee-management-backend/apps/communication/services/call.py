@@ -32,6 +32,29 @@ class CallService:
                 user=host,
                 joined_at=timezone.now()
             )
+
+        try:
+            from asgiref.sync import async_to_sync
+            from channels.layers import get_channel_layer
+            
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                async_to_sync(channel_layer.group_send)(
+                    f"conversation_{conversation.id}",
+                    {
+                        "type": "chat.call",
+                        "call_data": {
+                            "id": str(call.id),
+                            "type": call.type,
+                            "host_id": str(host.id),
+                            "host_name": f"{host.first_name} {host.last_name}".strip(),
+                            "conversation_id": str(conversation.id)
+                        }
+                    }
+                )
+        except Exception:
+            pass
+
         return call
 
     @staticmethod

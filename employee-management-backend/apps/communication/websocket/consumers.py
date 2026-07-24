@@ -128,6 +128,13 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             "message": event["message"]
         })
 
+    async def chat_call(self, event):
+        # Forward new call payload in real-time
+        await self.send_json({
+            "type": "call",
+            "call_data": event["call_data"]
+        })
+
     # DB Operations (async wrappers)
     @database_sync_to_async
     def get_user_from_token(self, token):

@@ -14,10 +14,12 @@ import { Input } from '@/components/common/Input'
 import { Badge } from '@/components/common/Badge'
 import { ModernPagination } from '@/components/common/ModernPagination'
 import { useChat } from '@/hooks/useChat'
+import { socketManager } from '@/utils/websocket'
 import {
   createConversation,
   scheduleMeeting,
-  fetchMeetings
+  fetchMeetings,
+  initiateCall
 } from '@/utils/communicationApi'
 
 export interface ChatMessage {
@@ -97,6 +99,7 @@ export const TeamManagementPage: React.FC = () => {
       const description = isDirect ? (otherMember?.user?.email || 'Direct Message') : (c.description || 'Group Discussion')
       return {
         id: c.id,
+        type: c.type,
         name,
         description,
         members: c.members?.map((m: any) => m.user?.id) || [],
@@ -290,8 +293,9 @@ export const TeamManagementPage: React.FC = () => {
 
   // Filter channels based on search query
   const filteredGroups = useMemo(() => {
-    if (!searchQuery.trim()) return groups
-    return groups.filter(g => g.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    const channels = groups.filter(g => g.type !== 'direct')
+    if (!searchQuery.trim()) return channels
+    return channels.filter(g => g.name.toLowerCase().includes(searchQuery.toLowerCase()))
   }, [groups, searchQuery])
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -318,6 +322,27 @@ export const TeamManagementPage: React.FC = () => {
   useEffect(() => {
     scrollToBottom()
   }, [messages, activeChatId])
+
+  useEffect(() => {
+    const unsubCall = socketManager.on('call', (data: any) => {
+      if (data.call_data && String(data.call_data.host_id) !== String(user?.id)) {
+        playSound('incoming')
+        setActiveCall({
+          type: data.call_data.type,
+          status: 'ringing',
+          partnerName: data.call_data.host_name,
+          duration: 0,
+          isMuted: false,
+          isCameraOff: false,
+          isScreenSharing: false,
+          isHandRaised: false
+        })
+      }
+    })
+    return () => {
+      unsubCall()
+    }
+  }, [user?.id])
 
   const handleSendMessage = (textOverride?: string) => {
     const textToSend = textOverride || inputText
@@ -419,7 +444,7 @@ export const TeamManagementPage: React.FC = () => {
     }
   }
 
-  const handleTriggerCall = (type: 'voice' | 'video', partnerName: string) => {
+  const handleTriggerCall = async (type: 'voice' | 'video', partnerName: string) => {
     setActiveCall({
       type,
       status: 'ringing',
@@ -430,6 +455,19 @@ export const TeamManagementPage: React.FC = () => {
       isScreenSharing: false,
       isHandRaised: false
     })
+
+    playSound('calling')
+
+    try {
+      if (activeChatId) {
+        await initiateCall({
+          conversation: activeChatId,
+          type
+        })
+      }
+    } catch (err) {
+      console.error('Failed to register call on backend:', err)
+    }
     
     // Simulate connection after 2 seconds
     setTimeout(() => {
