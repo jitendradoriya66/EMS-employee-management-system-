@@ -5,7 +5,9 @@ def get_user_role(user):
         return 'guest'
     if user.is_superuser:
         return 'super_admin'
-    return getattr(user, 'role', 'employee')
+    if user.is_staff:
+        return 'admin_hr'
+    return 'employee'
 
 class IsSuperAdmin(permissions.BasePermission):
     """
