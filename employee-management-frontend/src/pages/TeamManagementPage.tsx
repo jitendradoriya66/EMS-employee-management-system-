@@ -12,6 +12,7 @@ import { useEmployees } from '@/hooks/useEmployees'
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
 import { Badge } from '@/components/common/Badge'
+import { ModernPagination } from '@/components/common/ModernPagination'
 
 interface ChatMessage {
   id: string
@@ -87,31 +88,43 @@ export const TeamManagementPage: React.FC = () => {
     isHandRaised: boolean
   } | null>(null)
 
-  // Meeting Schedule State
-  const [meetings, setMeetings] = useState<MeetingItem[]>([
-    {
-      id: 'meet-1',
-      title: 'Daily Tech Standup',
-      time: '10:00 AM - 10:30 AM',
-      date: new Date().toISOString().slice(0, 10),
-      attendees: ['Bob', 'Alice'],
-      joinUrl: '#'
-    },
-    {
-      id: 'meet-2',
-      title: 'Sprint Planning & Retro',
-      time: '02:00 PM - 03:00 PM',
-      date: new Date().toISOString().slice(0, 10),
-      attendees: ['Bob', 'Alice', 'Charlie'],
-      joinUrl: '#'
+  // Prevent body scrolling on laptop/desktop viewports
+  useEffect(() => {
+    const mainEl = document.querySelector('main')
+    if (mainEl) {
+      mainEl.classList.add('lg:overflow-hidden')
     }
+    return () => {
+      if (mainEl) {
+        mainEl.classList.remove('lg:overflow-hidden')
+      }
+    }
+  }, [])
+
+  // Meeting Schedule State & Pagination
+  const [meetings, setMeetings] = useState<MeetingItem[]>([
+    { id: 'meet-1', title: 'Daily Tech Standup', time: '10:00 AM - 10:30 AM', date: new Date().toISOString().slice(0, 10), attendees: ['Bob', 'Alice'], joinUrl: '#' },
+    { id: 'meet-2', title: 'Sprint Planning & Retro', time: '02:00 PM - 03:00 PM', date: new Date().toISOString().slice(0, 10), attendees: ['Bob', 'Alice', 'Charlie'], joinUrl: '#' },
+    { id: 'meet-3', title: 'Product UI Design Sync', time: '11:00 AM - 11:30 AM', date: new Date().toISOString().slice(0, 10), attendees: ['Alice', 'David'], joinUrl: '#' },
+    { id: 'meet-4', title: 'Backend Architecture Alignment', time: '04:00 PM - 04:45 PM', date: new Date().toISOString().slice(0, 10), attendees: ['Charlie', 'Bob'], joinUrl: '#' },
+    { id: 'meet-5', title: 'Marketing Campaign Launch Brief', time: '01:00 PM - 01:30 PM', date: new Date().toISOString().slice(0, 10), attendees: ['Emma', 'Bob'], joinUrl: '#' },
+    { id: 'meet-6', title: 'HR General Onboarding Session', time: '09:00 AM - 09:30 AM', date: new Date().toISOString().slice(0, 10), attendees: ['Alice', 'John'], joinUrl: '#' }
   ])
 
   const [files] = useState<FileItem[]>([
     { id: 'f-1', name: 'UI_Design_Spec_v2.pdf', size: '4.2 MB', uploader: 'Alice Smith', uploadedAt: 'Today', type: 'pdf' },
     { id: 'f-2', name: 'Workforce_Model.xlsx', size: '1.8 MB', uploader: 'Bob Johnson', uploadedAt: 'Yesterday', type: 'doc' },
-    { id: 'f-3', name: 'Banner_Mockup_Premium.png', size: '12.4 MB', uploader: 'Charlie Brown', uploadedAt: '3 days ago', type: 'image' }
+    { id: 'f-3', name: 'Banner_Mockup_Premium.png', size: '12.4 MB', uploader: 'Charlie Brown', uploadedAt: '3 days ago', type: 'image' },
+    { id: 'f-4', name: 'Quarterly_Strategy_Slides.pdf', size: '8.1 MB', uploader: 'David Miller', uploadedAt: '4 days ago', type: 'pdf' },
+    { id: 'f-5', name: 'Employee_Handbook_2026.docx', size: '2.3 MB', uploader: 'Emma Watson', uploadedAt: '5 days ago', type: 'doc' },
+    { id: 'f-6', name: 'Production_Log_Dump.txt', size: '1.1 MB', uploader: 'Alice Smith', uploadedAt: 'Last week', type: 'doc' },
+    { id: 'f-7', name: 'Sprint_Burndown_Chart.png', size: '3.4 MB', uploader: 'Charlie Brown', uploadedAt: 'Last week', type: 'image' },
+    { id: 'f-8', name: 'Security_Audit_Report.pdf', size: '5.9 MB', uploader: 'David Miller', uploadedAt: '2 weeks ago', type: 'pdf' }
   ])
+
+  // Pagination states
+  const [meetingPage, setMeetingPage] = useState(1)
+  const [filePage, setFilePage] = useState(1)
 
   // Modals & Panels Control
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -297,6 +310,14 @@ export const TeamManagementPage: React.FC = () => {
     }, 2000)
   }
 
+  const meetingsPerPage = 4
+  const paginatedMeetings = meetings.slice((meetingPage - 1) * meetingsPerPage, meetingPage * meetingsPerPage)
+  const totalMeetingPages = Math.ceil(meetings.length / meetingsPerPage)
+
+  const filesPerPage = 6
+  const paginatedFiles = files.slice((filePage - 1) * filesPerPage, filePage * filesPerPage)
+  const totalFilePages = Math.ceil(files.length / filesPerPage)
+
   return (
     <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)] lg:h-[calc(100vh-140px)] gap-md relative overflow-hidden bg-background text-text-primary pb-16 lg:pb-0">
       {/* Persistent Left Sidebar */}
@@ -306,7 +327,7 @@ export const TeamManagementPage: React.FC = () => {
         {/* Workspace Title & Search */}
         <div className="flex items-center justify-between gap-sm mb-md px-sm">
           <div className="flex items-center gap-xs">
-            <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-primary-500 to-indigo-500 flex items-center justify-center text-white font-black text-sm">
+            <div className="h-8 w-8 rounded-xl bg-primary flex items-center justify-center text-white font-black text-sm">
               TC
             </div>
             <div>
@@ -318,7 +339,7 @@ export const TeamManagementPage: React.FC = () => {
         </div>
 
         {/* Global Tab Navigation */}
-        <div className="grid grid-cols-4 gap-xs p-xs rounded-xl bg-slate-100 dark:bg-slate-800/40 mb-md">
+        <div className="grid grid-cols-4 gap-xs p-xs rounded-xl bg-background border border-border/50 mb-md">
           {[
             { id: 'dashboard', label: 'Home', icon: Sparkles },
             { id: 'chat', label: 'Chat', icon: MessageSquare },
@@ -434,7 +455,7 @@ export const TeamManagementPage: React.FC = () => {
               className="flex-1 overflow-y-auto p-sm sm:p-lg space-y-sm sm:space-y-lg"
             >
               {/* Welcome Card */}
-              <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-primary-600 via-primary-500 to-indigo-600 p-md sm:p-xl text-white shadow-lg">
+              <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-primary-600 to-primary-700 p-md sm:p-xl text-white shadow-lg">
                 <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-white/5 blur-3xl pointer-events-none" />
                 <div className="max-w-xl space-y-sm">
                   <div className="inline-flex items-center gap-sm rounded-full bg-white/10 px-md py-xs text-xs font-semibold text-cyan-300">
@@ -451,7 +472,7 @@ export const TeamManagementPage: React.FC = () => {
               {/* Status and quick grid stats */}
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-md">
                 {[
-                  { label: 'Unread Messages', value: '14 alerts', icon: Bell, tone: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/20' },
+                  { label: 'Unread Messages', value: '14 alerts', icon: Bell, tone: 'text-primary bg-primary-50 dark:bg-primary-900/10' },
                   { label: 'Online Colleagues', value: `${employees.length} online`, icon: Users, tone: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20' },
                   { label: 'Scheduled Meetings', value: `${meetings.length} today`, icon: Calendar, tone: 'text-amber-600 bg-amber-50 dark:bg-amber-950/20' },
                   { label: 'Shared Media Assets', value: `${files.length} assets`, icon: FolderOpen, tone: 'text-cyan-600 bg-cyan-50 dark:bg-cyan-950/20' }
@@ -488,7 +509,7 @@ export const TeamManagementPage: React.FC = () => {
                   </div>
 
                   <div className="space-y-sm">
-                    {meetings.map(meet => (
+                    {meetings.slice(0, 2).map(meet => (
                       <div key={meet.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-md p-md border border-border rounded-2xl bg-slate-50/50 dark:bg-slate-900/10">
                         <div className="flex gap-sm items-center min-w-0">
                           <div className="p-xs bg-primary-100 dark:bg-primary-900/40 text-primary rounded-xl shrink-0">
@@ -709,7 +730,7 @@ export const TeamManagementPage: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
-                {meetings.map(meet => (
+                {paginatedMeetings.map(meet => (
                   <div key={meet.id} className="card p-md border border-border bg-card rounded-2xl flex flex-col justify-between">
                     <div className="space-y-sm">
                       <div className="flex items-center gap-xs">
@@ -729,6 +750,16 @@ export const TeamManagementPage: React.FC = () => {
                   </div>
                 ))}
               </div>
+
+              {totalMeetingPages > 1 && (
+                <div className="pt-md border-t border-border flex justify-center">
+                  <ModernPagination
+                    currentPage={meetingPage}
+                    totalPages={totalMeetingPages}
+                    onPageChange={setMeetingPage}
+                  />
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -746,7 +777,7 @@ export const TeamManagementPage: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-md">
-                {files.map(file => (
+                {paginatedFiles.map(file => (
                   <div key={file.id} className="card p-md border border-border bg-card rounded-2xl flex flex-col justify-between">
                     <div className="flex gap-sm items-start">
                       <div className="p-sm rounded-xl bg-slate-100 dark:bg-slate-800 text-primary">
@@ -768,6 +799,16 @@ export const TeamManagementPage: React.FC = () => {
                   </div>
                 ))}
               </div>
+
+              {totalFilePages > 1 && (
+                <div className="pt-md border-t border-border flex justify-center">
+                  <ModernPagination
+                    currentPage={filePage}
+                    totalPages={totalFilePages}
+                    onPageChange={setFilePage}
+                  />
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -824,7 +865,7 @@ export const TeamManagementPage: React.FC = () => {
                         </div>
                       ) : (
                         <div className="text-center space-y-md">
-                          <div className="h-20 w-20 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-4xl font-bold mx-auto">
+                          <div className="h-20 w-20 rounded-full bg-primary/20 text-primary flex items-center justify-center text-4xl font-bold mx-auto">
                             ME
                           </div>
                           <p className="text-sm font-semibold">Self Stream (Host)</p>
@@ -837,7 +878,7 @@ export const TeamManagementPage: React.FC = () => {
                   </div>
                 ) : (
                   <div className="text-center space-y-lg">
-                    <div className="h-32 w-32 rounded-full bg-gradient-to-tr from-primary-500 to-indigo-500 flex items-center justify-center text-white text-5xl font-black mx-auto shadow-2xl relative">
+                    <div className="h-32 w-32 rounded-full bg-primary flex items-center justify-center text-white text-5xl font-black mx-auto shadow-2xl relative">
                       {activeCall.partnerName[0]}
                       {/* Pulse soundwaves */}
                       <span className="absolute inset-0 rounded-full bg-primary-500/20 animate-ping" />
