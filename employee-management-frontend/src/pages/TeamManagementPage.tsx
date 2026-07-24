@@ -5,7 +5,7 @@ import {
   Phone, Video, Calendar, FolderOpen, 
   Pin, Bell, Sparkles, Smile, 
   Paperclip, Mic, VideoOff, MicOff, PhoneOff, Hand,
-  Eye, Download, Info, ArrowLeft
+  Eye, Download, Info, ArrowLeft, Search, Upload
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useEmployees } from '@/hooks/useEmployees'
@@ -111,20 +111,60 @@ export const TeamManagementPage: React.FC = () => {
     { id: 'meet-6', title: 'HR General Onboarding Session', time: '09:00 AM - 09:30 AM', date: new Date().toISOString().slice(0, 10), attendees: ['Alice', 'John'], joinUrl: '#' }
   ])
 
-  const [files] = useState<FileItem[]>([
-    { id: 'f-1', name: 'UI_Design_Spec_v2.pdf', size: '4.2 MB', uploader: 'Alice Smith', uploadedAt: 'Today', type: 'pdf' },
-    { id: 'f-2', name: 'Workforce_Model.xlsx', size: '1.8 MB', uploader: 'Bob Johnson', uploadedAt: 'Yesterday', type: 'doc' },
-    { id: 'f-3', name: 'Banner_Mockup_Premium.png', size: '12.4 MB', uploader: 'Charlie Brown', uploadedAt: '3 days ago', type: 'image' },
-    { id: 'f-4', name: 'Quarterly_Strategy_Slides.pdf', size: '8.1 MB', uploader: 'David Miller', uploadedAt: '4 days ago', type: 'pdf' },
-    { id: 'f-5', name: 'Employee_Handbook_2026.docx', size: '2.3 MB', uploader: 'Emma Watson', uploadedAt: '5 days ago', type: 'doc' },
-    { id: 'f-6', name: 'Production_Log_Dump.txt', size: '1.1 MB', uploader: 'Alice Smith', uploadedAt: 'Last week', type: 'doc' },
-    { id: 'f-7', name: 'Sprint_Burndown_Chart.png', size: '3.4 MB', uploader: 'Charlie Brown', uploadedAt: 'Last week', type: 'image' },
-    { id: 'f-8', name: 'Security_Audit_Report.pdf', size: '5.9 MB', uploader: 'David Miller', uploadedAt: '2 weeks ago', type: 'pdf' }
-  ])
+  // Sound effects synthesiser using native Web Audio API
+  const playSound = (type: 'outgoing' | 'incoming' | 'calling') => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const osc = audioCtx.createOscillator()
+      const gain = audioCtx.createGain()
+      
+      osc.connect(gain)
+      gain.connect(audioCtx.destination)
+      
+      if (type === 'outgoing') {
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(400, audioCtx.currentTime)
+        osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.12)
+        gain.gain.setValueAtTime(0.25, audioCtx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12)
+        osc.start()
+        osc.stop(audioCtx.currentTime + 0.12)
+      } else if (type === 'incoming') {
+        osc.type = 'triangle'
+        osc.frequency.setValueAtTime(523.25, audioCtx.currentTime)
+        osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.08)
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3)
+        osc.start()
+        osc.stop(audioCtx.currentTime + 0.3)
+      }
+    } catch (e) {
+      console.warn(e)
+    }
+  }
+
+  const [files, setFiles] = useState<FileItem[]>(() => {
+    const stored = localStorage.getItem('ems_team_files_v2')
+    return stored ? JSON.parse(stored) : [
+      { id: 'f-1', name: 'UI_Design_Spec_v2.pdf', size: '4.2 MB', uploader: 'Alice Smith', uploadedAt: 'Today', type: 'pdf' },
+      { id: 'f-2', name: 'Workforce_Model.xlsx', size: '1.8 MB', uploader: 'Bob Johnson', uploadedAt: 'Yesterday', type: 'doc' },
+      { id: 'f-3', name: 'Banner_Mockup_Premium.png', size: '12.4 MB', uploader: 'Charlie Brown', uploadedAt: '3 days ago', type: 'image' },
+      { id: 'f-4', name: 'Quarterly_Strategy_Slides.pdf', size: '8.1 MB', uploader: 'David Miller', uploadedAt: '4 days ago', type: 'pdf' },
+      { id: 'f-5', name: 'Employee_Handbook_2026.docx', size: '2.3 MB', uploader: 'Emma Watson', uploadedAt: '5 days ago', type: 'doc' },
+      { id: 'f-6', name: 'Production_Log_Dump.txt', size: '1.1 MB', uploader: 'Alice Smith', uploadedAt: 'Last week', type: 'doc' },
+      { id: 'f-7', name: 'Sprint_Burndown_Chart.png', size: '3.4 MB', uploader: 'Charlie Brown', uploadedAt: 'Last week', type: 'image' },
+      { id: 'f-8', name: 'Security_Audit_Report.pdf', size: '5.9 MB', uploader: 'David Miller', uploadedAt: '2 weeks ago', type: 'pdf' }
+    ]
+  })
 
   // Pagination states
   const [meetingPage, setMeetingPage] = useState(1)
   const [filePage, setFilePage] = useState(1)
+
+  // Functional search & typing states
+  const [searchQuery, setSearchQuery] = useState('')
+  const [typingUser, setTypingUser] = useState<string | null>(null)
+  const [unreads, setUnreads] = useState<Record<string, number>>({})
 
   // Modals & Panels Control
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -133,6 +173,7 @@ export const TeamManagementPage: React.FC = () => {
   const [groupForm, setGroupForm] = useState({ name: '', description: '', members: [] as string[] })
   const [meetingForm, setMeetingForm] = useState({ title: '', time: '11:00 AM', date: new Date().toISOString().slice(0, 10), attendees: [] as string[] })
 
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   
   // Call timer simulation
@@ -205,13 +246,104 @@ export const TeamManagementPage: React.FC = () => {
     }
   }, [activeChatId, activeChatType, groups, employees])
 
-  // Filter contacts for DMs
-  const dmPartners = useMemo(() => {
-    if (isEmployee) {
-      return employees.filter(e => e.id !== currentEmployeeId && e.department === currentEmployee?.department)
+  // Reset unread count for current active chat
+  useEffect(() => {
+    if (activeChatId) {
+      setUnreads(prev => ({ ...prev, [activeChatId]: 0 }))
     }
-    return employees.filter(e => e.id !== currentEmployeeId)
-  }, [employees, currentEmployeeId, currentEmployee, isEmployee])
+  }, [activeChatId])
+
+  // Background message generator simulation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (Math.random() > 0.45) return
+      
+      const colleagues = ['Alice Smith', 'Bob Johnson', 'Charlie Brown', 'David Miller', 'Emma Watson']
+      const randomName = colleagues[Math.floor(Math.random() * colleagues.length)]
+      
+      setTypingUser(randomName)
+      
+      setTimeout(() => {
+        setTypingUser(null)
+        
+        const targetGroup = groups[Math.floor(Math.random() * groups.length)]
+        if (!targetGroup) return
+        
+        const newMsg: ChatMessage = {
+          id: `msg-sim-${Date.now()}`,
+          senderId: `emp-sim-${Math.random().toString(36).substring(7)}`,
+          senderName: randomName,
+          senderRole: 'Team Collaborator',
+          text: [
+            "Hey! Did anyone see the latest design specs?",
+            "Just uploaded a new workbook in the Files tab.",
+            "I'm working on the mobile updates now. Should compile clean.",
+            "We have a sync standup scheduled later today.",
+            "Great effort on the release sprint guys!"
+          ][Math.floor(Math.random() * 5)],
+          timestamp: new Date().toISOString()
+        }
+
+        setMessages(prev => {
+          const currentMsgs = prev[targetGroup.id] || []
+          const updated = { ...prev, [targetGroup.id]: [...currentMsgs, newMsg] }
+          localStorage.setItem('ems_chat_messages_v2', JSON.stringify(updated))
+          return updated
+        })
+
+        playSound('incoming')
+
+        if (activeChatId !== targetGroup.id) {
+          setUnreads(prev => ({
+            ...prev,
+            [targetGroup.id]: (prev[targetGroup.id] || 0) + 1
+          }))
+        }
+      }, 2500)
+    }, 45000)
+
+    return () => clearInterval(interval)
+  }, [groups, activeChatId])
+
+  // Filter contacts for DMs based on search query
+  const dmPartners = useMemo(() => {
+    const baseList = isEmployee
+      ? employees.filter(e => e.id !== currentEmployeeId && e.department === currentEmployee?.department)
+      : employees.filter(e => e.id !== currentEmployeeId)
+      
+    if (!searchQuery.trim()) return baseList
+    return baseList.filter(emp => 
+      `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  }, [employees, currentEmployeeId, currentEmployee, isEmployee, searchQuery])
+
+  // Filter channels based on search query
+  const filteredGroups = useMemo(() => {
+    if (!searchQuery.trim()) return groups
+    return groups.filter(g => g.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  }, [groups, searchQuery])
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const uploadedFile = e.target.files?.[0]
+    if (!uploadedFile) return
+    
+    const newFile: FileItem = {
+      id: `f-${Date.now()}`,
+      name: uploadedFile.name,
+      size: `${(uploadedFile.size / (1024 * 1024)).toFixed(1)} MB`,
+      uploader: user?.name || 'Current User',
+      uploadedAt: 'Just now',
+      type: uploadedFile.name.endsWith('.pdf') ? 'pdf' : uploadedFile.name.endsWith('.png') || uploadedFile.name.endsWith('.jpg') ? 'image' : 'doc'
+    }
+    
+    setFiles(prev => {
+      const updated = [newFile, ...prev]
+      localStorage.setItem('ems_team_files_v2', JSON.stringify(updated))
+      return updated
+    })
+    
+    playSound('outgoing')
+  }
 
   // Scroll to bottom helper
   const scrollToBottom = () => {
@@ -243,6 +375,7 @@ export const TeamManagementPage: React.FC = () => {
     setMessages(updated)
     localStorage.setItem('ems_chat_messages_v2', JSON.stringify(updated))
     setInputText('')
+    playSound('outgoing')
   }
 
   const handleAddReaction = (msgId: string, emoji: string) => {
@@ -364,6 +497,16 @@ export const TeamManagementPage: React.FC = () => {
               </button>
             )
           })}
+        </div>        {/* Workspace Search Input */}
+        <div className="mb-md relative">
+          <input
+            type="text"
+            placeholder="Search channels or DMs..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full text-xs rounded-xl border border-border bg-background px-md py-sm pl-8 text-text-primary focus:outline-none focus:ring-1 focus:ring-primary focus:border-transparent transition-all"
+          />
+          <Search className="h-3.5 w-3.5 text-text-secondary absolute left-3 top-2.5" />
         </div>
 
         {/* Channels/Active list for Sidebar */}
@@ -377,7 +520,7 @@ export const TeamManagementPage: React.FC = () => {
               </button>
             </div>
             <div className="space-y-xs">
-              {groups.map(g => (
+              {filteredGroups.map(g => (
                 <div
                   key={g.id}
                   onClick={() => {
@@ -388,7 +531,7 @@ export const TeamManagementPage: React.FC = () => {
                   className={`flex items-center justify-between p-sm rounded-xl cursor-pointer transition-all duration-200 group border ${
                     activeChatId === g.id && activeTab === 'chat'
                       ? 'bg-primary-50 dark:bg-primary-950/20 border-primary-200 dark:border-primary-800'
-                      : 'hover:bg-slate-100 dark:hover:bg-slate-800/40 border-transparent'
+                      : 'hover:bg-background border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-sm min-w-0">
@@ -400,7 +543,14 @@ export const TeamManagementPage: React.FC = () => {
                       <p className="text-[10px] text-text-secondary truncate">{g.description || 'General Discussion'}</p>
                     </div>
                   </div>
-                  {g.isPinned && <Pin className="h-3 w-3 text-text-secondary" />}
+                  <div className="flex items-center gap-xs shrink-0">
+                    {unreads[g.id] > 0 && (
+                      <span className="h-4 min-w-[16px] px-1 rounded-full bg-primary text-white font-bold text-[9px] flex items-center justify-center animate-pulse">
+                        {unreads[g.id]}
+                      </span>
+                    )}
+                    {g.isPinned && <Pin className="h-3 w-3 text-text-secondary" />}
+                  </div>
                 </div>
               ))}
             </div>
@@ -418,19 +568,28 @@ export const TeamManagementPage: React.FC = () => {
                     setActiveChatId(emp.id)
                     setActiveChatType('dm')
                   }}
-                  className={`flex items-center gap-sm p-sm rounded-xl cursor-pointer transition-all duration-200 border ${
+                  className={`flex items-center justify-between p-sm rounded-xl cursor-pointer transition-all duration-200 border ${
                     activeChatId === emp.id && activeTab === 'chat'
                       ? 'bg-primary-50 dark:bg-primary-950/20 border-primary-200 dark:border-primary-800'
                       : 'hover:bg-background border-transparent'
                   }`}
                 >
-                  <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center text-text-primary text-xs font-bold relative shrink-0">
-                    {emp.firstName[0]}{emp.lastName[0]}
-                    <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border border-card bg-emerald-500" />
+                  <div className="flex items-center gap-sm min-w-0">
+                    <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center text-text-primary text-xs font-bold relative shrink-0">
+                      {emp.firstName[0]}{emp.lastName[0]}
+                      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border border-card bg-emerald-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-text-primary truncate">{emp.firstName} {emp.lastName}</p>
+                      <p className="text-[10px] text-text-secondary truncate">{emp.position} • {emp.department}</p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-text-primary truncate">{emp.firstName} {emp.lastName}</p>
-                    <p className="text-[10px] text-text-secondary truncate">{emp.position} • {emp.department}</p>
+                  <div className="flex items-center gap-xs shrink-0">
+                    {unreads[emp.id] > 0 && (
+                      <span className="h-4 min-w-[16px] px-1 rounded-full bg-primary text-white font-bold text-[9px] flex items-center justify-center animate-pulse">
+                        {unreads[emp.id]}
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -648,6 +807,16 @@ export const TeamManagementPage: React.FC = () => {
                           </div>
                         )
                       })}
+                      {typingUser && (
+                        <div className="flex items-center gap-xs text-xs text-text-secondary italic bg-background/40 backdrop-blur-sm rounded-xl px-md py-sm border border-border/40 w-fit max-w-[70%] animate-pulse">
+                          <div className="flex gap-0.5 mr-xs shrink-0">
+                            <span className="h-1.5 w-1.5 rounded-full bg-text-secondary animate-bounce" />
+                            <span className="h-1.5 w-1.5 rounded-full bg-text-secondary animate-bounce [animation-delay:0.2s]" />
+                            <span className="h-1.5 w-1.5 rounded-full bg-text-secondary animate-bounce [animation-delay:0.4s]" />
+                          </div>
+                          <span>{typingUser} is typing...</span>
+                        </div>
+                      )}
                       <div ref={messagesEndRef} />
                     </div>
 
@@ -771,9 +940,25 @@ export const TeamManagementPage: React.FC = () => {
               exit={{ opacity: 0 }}
               className="flex-1 overflow-y-auto p-sm sm:p-lg space-y-sm sm:space-y-md"
             >
-              <div>
-                <h2 className="text-lg font-bold text-text-primary">Shared Team Files</h2>
-                <p className="text-sm text-text-secondary">Manage collaborative documents and mockups</p>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-sm">
+                <div>
+                  <h2 className="text-lg font-bold text-text-primary">Shared Team Files</h2>
+                  <p className="text-sm text-text-secondary">Manage collaborative documents and mockups</p>
+                </div>
+                <input 
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <Button 
+                  variant="primary" 
+                  onClick={() => fileInputRef.current?.click()} 
+                  className="w-full sm:w-auto gap-sm justify-center"
+                >
+                  <Upload className="h-4 w-4" />
+                  Upload File
+                </Button>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-md">
