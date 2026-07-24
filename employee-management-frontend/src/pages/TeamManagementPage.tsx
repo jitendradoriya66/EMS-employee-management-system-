@@ -298,10 +298,10 @@ export const TeamManagementPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)] lg:h-[calc(100vh-140px)] gap-md relative overflow-hidden bg-background text-text-primary">
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)] lg:h-[calc(100vh-140px)] gap-md relative overflow-hidden bg-background text-text-primary pb-16 lg:pb-0">
       {/* Persistent Left Sidebar */}
       <div className={`w-full lg:w-80 flex-col rounded-3xl border border-border bg-card p-md shadow-sm no-print ${
-        activeTab === 'chat' && activeChatId !== null ? 'hidden lg:flex' : 'flex'
+        activeTab === 'chat' && activeChatId === null ? 'flex' : 'hidden lg:flex'
       }`}>
         {/* Workspace Title & Search */}
         <div className="flex items-center justify-between gap-sm mb-md px-sm">
@@ -983,6 +983,38 @@ export const TeamManagementPage: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Mobile Bottom Navigation Bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-card border-t border-border flex items-center justify-around px-md z-40 shadow-lg no-print">
+        {[
+          { id: 'dashboard', label: 'Home', icon: Sparkles },
+          { id: 'chat', label: 'Chat', icon: MessageSquare },
+          { id: 'meetings', label: 'Meetings', icon: Calendar },
+          { id: 'files', label: 'Files', icon: FolderOpen }
+        ].map(tab => {
+          const Icon = tab.icon
+          const isActive = activeTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id as any)
+                if (tab.id !== 'chat') {
+                  setActiveChatId(null)
+                }
+              }}
+              className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-center transition-all ${
+                isActive 
+                  ? 'text-primary' 
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <Icon className="h-5 w-5" />
+              <span className="text-[10px] font-semibold mt-0.5">{tab.label}</span>
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }
