@@ -65,9 +65,8 @@ export const TeamManagementPage: React.FC = () => {
 
   const { employees } = useEmployees()
 
-  // Current logged in employee info
   const currentEmployee = useMemo(() => {
-    return employees.find(e => e.email.toLowerCase() === user?.email?.toLowerCase())
+    return employees.find(e => e.email?.toLowerCase() === user?.email?.toLowerCase())
   }, [employees, user?.email])
 
   const currentEmployeeId = currentEmployee?.id || 'temp'
