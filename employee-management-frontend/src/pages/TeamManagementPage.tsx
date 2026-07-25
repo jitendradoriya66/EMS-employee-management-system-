@@ -400,15 +400,13 @@ export const TeamManagementPage: React.FC = () => {
 
   // Filter contacts for DMs based on search query
   const dmPartners = useMemo(() => {
-    const baseList = isEmployee
-      ? employees.filter(e => e.id !== currentEmployeeId && e.department === currentEmployee?.department)
-      : employees.filter(e => e.id !== currentEmployeeId)
+    const baseList = employees.filter(e => e.id !== currentEmployeeId)
       
     if (!searchQuery.trim()) return baseList
     return baseList.filter(emp => 
       `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
     )
-  }, [employees, currentEmployeeId, currentEmployee, isEmployee, searchQuery])
+  }, [employees, currentEmployeeId, searchQuery])
 
   // Filter channels based on search query
   const filteredGroups = useMemo(() => {
@@ -1209,6 +1207,7 @@ export const TeamManagementPage: React.FC = () => {
                       {activeCall.status === 'connected' ? (
                         <video 
                           ref={remoteVideoRef} 
+                          autoPlay
                           playsInline 
                           className="absolute inset-0 w-full h-full object-cover"
                         />
@@ -1254,7 +1253,7 @@ export const TeamManagementPage: React.FC = () => {
                     </div>
                     <h3 className="text-xl sm:text-2xl font-black">{activeCall.partnerName}</h3>
                     <p className="text-[10px] sm:text-xs text-slate-500">Voice Link Connection Established</p>
-                    <audio ref={remoteAudioRef} autoPlay className="hidden" />
+                    <audio ref={remoteAudioRef} autoPlay className="absolute opacity-0 pointer-events-none w-px h-px" />
                   </div>
                 )}
 
