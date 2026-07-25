@@ -24,14 +24,6 @@ class EmployeeListAPIView(generics.ListAPIView):
     ordering = ['user__first_name']
 
     def get_queryset(self):
-        user = self.request.user
-        is_employee = not (user.is_staff or getattr(user, 'role', 'employee') != 'employee')
-        if is_employee:
-            if hasattr(user, 'employee_profile') and user.employee_profile.department:
-                return Employee.objects.select_related('user', 'department', 'manager__user').filter(
-                    department=user.employee_profile.department
-                )
-            return Employee.objects.select_related('user', 'department', 'manager__user').filter(user=user)
         return Employee.objects.select_related('user', 'department', 'manager__user').all()
 
 class EmployeeCreateAPIView(generics.CreateAPIView):

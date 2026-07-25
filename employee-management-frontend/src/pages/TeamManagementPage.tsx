@@ -611,7 +611,7 @@ export const TeamManagementPage: React.FC = () => {
   return (
     <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)] lg:h-[calc(100vh-140px)] gap-md relative overflow-hidden bg-background text-text-primary pb-16 lg:pb-0">
       {/* Persistent Left Sidebar */}
-      <div className={`w-full lg:w-80 flex-col rounded-3xl border border-border bg-card p-md shadow-sm no-print ${
+      <div className={`w-full lg:w-80 h-full lg:h-auto flex flex-col rounded-3xl border border-border bg-card p-md shadow-sm no-print ${
         activeTab === 'chat' && activeChatId === null ? 'flex' : 'hidden lg:flex'
       }`}>
         {/* Workspace Title & Search */}
@@ -629,7 +629,7 @@ export const TeamManagementPage: React.FC = () => {
         </div>
 
         {/* Global Tab Navigation */}
-        <div className="grid grid-cols-4 gap-xs p-xs rounded-xl bg-background border border-border/50 mb-md">
+        <div className="hidden lg:grid grid-cols-4 gap-xs p-xs rounded-xl bg-background border border-border/50 mb-md">
           {[
             { id: 'dashboard', label: 'Home', icon: Sparkles },
             { id: 'chat', label: 'Chat', icon: MessageSquare },
