@@ -1501,7 +1501,11 @@ export const TeamManagementPage: React.FC = () => {
                       <span className="absolute inset-0 rounded-full bg-primary-500/20 animate-ping" />
                     </div>
                     <h3 className="text-xl sm:text-2xl font-black">{activeCall.partnerName}</h3>
-                    <p className="text-[10px] sm:text-xs text-slate-500">Voice Link Connection Established</p>
+                     <p className="text-[10px] sm:text-xs text-slate-500">
+                       {activeCall.status === 'ringing' 
+                         ? (activeCall.isIncoming ? 'Incoming Call...' : 'Calling...') 
+                         : 'Voice Link Connection Established'}
+                     </p>
                     <audio 
                       ref={(el) => {
                         remoteAudioRef.current = el;
