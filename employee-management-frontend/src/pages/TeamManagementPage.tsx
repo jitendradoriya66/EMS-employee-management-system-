@@ -684,6 +684,16 @@ export const TeamManagementPage: React.FC = () => {
   const handleScheduleMeeting = async () => {
     if (!meetingForm.title.trim()) return
     try {
+      const allUsers = await fetchUsers()
+      const selectedEmails = meetingForm.attendees.map(empId => {
+        const emp = employees.find(e => e.id === empId)
+        return emp?.email?.toLowerCase()
+      }).filter(Boolean)
+
+      const userIds = allUsers.filter((u: any) => 
+        selectedEmails.includes(u.email?.toLowerCase())
+      ).map((u: any) => u.id)
+
       // Parse dates safely
       let timeStr = meetingForm.time
       if (timeStr.includes('AM') || timeStr.includes('PM')) {
@@ -699,7 +709,7 @@ export const TeamManagementPage: React.FC = () => {
       await scheduleMeeting({
         title: meetingForm.title,
         start_time: startTime,
-        invitee_ids: meetingForm.attendees
+        invitee_ids: userIds
       })
       
       const res = await fetchMeetings()
@@ -716,6 +726,7 @@ export const TeamManagementPage: React.FC = () => {
         setMeetings([])
       }
       setShowScheduleModal(false)
+      setMeetingForm({ title: '', time: '11:00 AM', date: new Date().toISOString().slice(0, 10), attendees: [] })
     } catch (e) {
       console.error(e)
     }
@@ -801,6 +812,23 @@ export const TeamManagementPage: React.FC = () => {
       document.body.classList.remove('mobile-chat-active')
     }
   }, [activeTab, activeChatId])
+
+  const totalUnreadMessages = useMemo(() => {
+    return Array.isArray(conversations) ? conversations.reduce((acc, c) => acc + (c.unread_count || 0), 0) : 0
+  }, [conversations])
+
+  const totalOnlineColleagues = useMemo(() => {
+    return Object.values(onlineUsers).filter(Boolean).length
+  }, [onlineUsers])
+
+  const totalTodayMeetings = useMemo(() => {
+    const todayStr = new Date().toISOString().slice(0, 10)
+    return meetings.filter(m => m.date === todayStr).length
+  }, [meetings])
+
+  const totalSharedAssets = useMemo(() => {
+    return files.length
+  }, [files])
 
   return (
     <div className={`flex flex-col lg:flex-row h-[100dvh] lg:h-[calc(100vh-140px)] gap-md relative overflow-hidden bg-background text-text-primary ${
@@ -973,7 +1001,7 @@ export const TeamManagementPage: React.FC = () => {
       </div>
 
       {/* Main Workspace Frame */}
-      <div className={`flex-1 flex flex-col rounded-none lg:rounded-3xl bg-slate-50/40 dark:bg-slate-900/10 overflow-hidden relative border-0 lg:border lg:border-border/50 ${
+      <div className={`flex-1 flex flex-col overflow-hidden relative ${
         activeTab === 'chat' && activeChatId === null ? 'hidden lg:flex' : 'flex'
       }`}>
         
@@ -1005,10 +1033,10 @@ export const TeamManagementPage: React.FC = () => {
               {/* Status and quick grid stats */}
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-md">
                 {[
-                  { label: 'Unread Messages', value: '14 alerts', icon: Bell, tone: 'text-primary bg-primary-50 dark:bg-primary-900/10' },
-                  { label: 'Online Colleagues', value: `${employees.length} online`, icon: Users, tone: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20' },
-                  { label: 'Scheduled Meetings', value: `${meetings.length} today`, icon: Calendar, tone: 'text-amber-600 bg-amber-50 dark:bg-amber-950/20' },
-                  { label: 'Shared Media Assets', value: `${files.length} assets`, icon: FolderOpen, tone: 'text-cyan-600 bg-cyan-50 dark:bg-cyan-950/20' }
+                  { label: 'Unread Messages', value: `${totalUnreadMessages} alerts`, icon: Bell, tone: 'text-primary bg-primary-50 dark:bg-primary-900/10' },
+                  { label: 'Online Colleagues', value: `${totalOnlineColleagues} online`, icon: Users, tone: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20' },
+                  { label: 'Scheduled Meetings', value: `${totalTodayMeetings} today`, icon: Calendar, tone: 'text-amber-600 bg-amber-50 dark:bg-amber-950/20' },
+                  { label: 'Shared Media Assets', value: `${totalSharedAssets} assets`, icon: FolderOpen, tone: 'text-cyan-600 bg-cyan-50 dark:bg-cyan-950/20' }
                 ].map((stat, i) => {
                   const Icon = stat.icon
                   return (
@@ -1789,11 +1817,37 @@ export const TeamManagementPage: React.FC = () => {
                   onChange={e => setMeetingForm(prev => ({ ...prev, title: e.target.value }))}
                 />
                 <Input
+                  label="Meeting Date"
+                  type="date"
+                  value={meetingForm.date}
+                  onChange={e => setMeetingForm(prev => ({ ...prev, date: e.target.value }))}
+                />
+                <Input
                   label="Meeting Time"
-                  placeholder="e.g. 10:00 AM - 10:30 AM"
+                  placeholder="e.g. 10:00 AM"
                   value={meetingForm.time}
                   onChange={e => setMeetingForm(prev => ({ ...prev, time: e.target.value }))}
                 />
+                <div className="space-y-xs max-h-32 overflow-y-auto border border-border rounded-xl p-sm bg-background">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary">Invite Members</p>
+                  {employees.map(emp => (
+                    <label key={emp.id} className="flex items-center gap-sm text-xs cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 p-1.5 rounded-lg">
+                      <input
+                        type="checkbox"
+                        checked={meetingForm.attendees.includes(emp.id)}
+                        onChange={e => {
+                          if (e.target.checked) {
+                            setMeetingForm(prev => ({ ...prev, attendees: [...prev.attendees, emp.id] }))
+                          } else {
+                            setMeetingForm(prev => ({ ...prev, attendees: prev.attendees.filter(id => id !== emp.id) }))
+                          }
+                        }}
+                        className="rounded text-primary border-border focus:ring-primary"
+                      />
+                      <span className="text-text-primary truncate">{emp.firstName} {emp.lastName}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               <div className="flex flex-col-reverse sm:flex-row gap-sm justify-end pt-sm border-t border-border mt-md">
