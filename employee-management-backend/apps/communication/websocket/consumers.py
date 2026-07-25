@@ -83,6 +83,11 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 self.channel_name
             )
 
+    async def send_json(self, content, close=False):
+        from django.core.serializers.json import DjangoJSONEncoder
+        serialized_content = json.loads(json.dumps(content, cls=DjangoJSONEncoder))
+        await super().send_json(serialized_content, close)
+
     async def receive_json(self, content):
         event_type = content.get('type')
         conversation_id = content.get('conversation_id')
