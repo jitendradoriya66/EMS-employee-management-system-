@@ -193,7 +193,7 @@ export function useChat(activeConversationId: string | null) {
     })
 
     const unsubTyping = socketManager.on('typing', (data) => {
-      if (data.conversation_id === activeConversationId) {
+      if (data.conversation_id === activeConversationId && String(data.user_id) !== String(user?.id)) {
         setTypingUsers((prev) => ({
           ...prev,
           [data.user_name]: data.is_typing

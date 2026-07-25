@@ -9,21 +9,30 @@ class ChatSocketManager {
   private reconnectTimer: any = null;
 
   constructor() {
-    const isSecure = window.location.protocol === 'https:';
-    let host = import.meta.env.VITE_API_URL || '';
-    
-    if (host) {
-      host = host.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:');
-    } else {
-      // Fallback: If on localhost, use local backend port, otherwise use production host
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        host = isSecure ? 'wss://localhost:8000' : 'ws://localhost:8000';
-      } else {
-        host = isSecure ? `wss://${window.location.host}` : `ws://${window.location.host}`;
+    let wsUrl = import.meta.env.VITE_WS_URL || '';
+    if (wsUrl) {
+      if (!wsUrl.startsWith('ws://') && !wsUrl.startsWith('wss://')) {
+        const isSecure = window.location.protocol === 'https:';
+        wsUrl = (isSecure ? 'wss://' : 'ws://') + wsUrl;
       }
+      this.url = wsUrl.endsWith('/') ? wsUrl : `${wsUrl}/`;
+    } else {
+      const isSecure = window.location.protocol === 'https:';
+      let host = import.meta.env.VITE_API_URL || '';
+      
+      if (host) {
+        host = host.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:');
+      } else {
+        // Fallback: If on localhost, use local backend port, otherwise use production host
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          host = isSecure ? 'wss://localhost:8000' : 'ws://localhost:8000';
+        } else {
+          host = isSecure ? `wss://${window.location.host}` : `ws://${window.location.host}`;
+        }
+      }
+      
+      this.url = `${host}/ws/communication/chat/`;
     }
-    
-    this.url = `${host}/ws/communication/chat/`;
   }
 
   public connect(): void {
