@@ -27,7 +27,7 @@ import { Alert } from '@/components/common/Alert'
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
 import { Select } from '@/components/common/Select'
-import { ModernPagination } from '@/components/common/ModernPagination'
+import { Pagination } from '@/components/common/Pagination'
 import { useAuth } from '@/contexts/AuthContext'
 import type { UserAccount, UserRole } from '@/types'
 
@@ -471,10 +471,12 @@ export const UserManagementPage: React.FC = () => {
             </div>
 
             {totalPages > 1 && (
-              <div className="px-lg py-md border-t border-border">
-                <ModernPagination
+              <div className="px-lg py-md border-t border-border bg-card">
+                <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
+                  totalItems={filteredUsers.length}
+                  itemsPerPage={pageSize}
                   onPageChange={setPage}
                 />
               </div>

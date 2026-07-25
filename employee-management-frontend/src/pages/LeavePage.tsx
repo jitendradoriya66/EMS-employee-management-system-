@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useLeaveRequests } from '@/hooks/useLeaveRequests'
 import { CircleCheck, CircleX } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
-import { ModernPagination } from '@/components/common/ModernPagination'
+import { Pagination } from '@/components/common/Pagination'
 import { UnifiedLoader } from '@/components/common/UnifiedLoader'
 
 export const LeavePage: React.FC = () => {
@@ -211,9 +211,11 @@ export const LeavePage: React.FC = () => {
             </div>
             
             {employeeTotalCount > 0 && (
-              <ModernPagination
+              <Pagination
                 currentPage={employeePage}
                 totalPages={totalMyLeavesPages}
+                totalItems={employeeTotalCount}
+                itemsPerPage={itemsPerPage}
                 onPageChange={setEmployeePage}
               />
             )}
@@ -396,9 +398,11 @@ export const LeavePage: React.FC = () => {
         </div>
         
         {reviewedTotalCount > 0 && (
-          <ModernPagination
+          <Pagination
             currentPage={adminPage}
             totalPages={totalAdminPages}
+            totalItems={reviewedTotalCount}
+            itemsPerPage={itemsPerPage}
             onPageChange={setAdminPage}
           />
         )}

@@ -3,7 +3,7 @@ import { CalendarCheck2, CalendarX2, Clock3, Filter, Search, TrendingUp, Users, 
 import { motion } from 'framer-motion'
 import { useAttendance } from '@/hooks/useAttendance'
 import { useAuth } from '@/contexts/AuthContext'
-import { ModernPagination } from '@/components/common/ModernPagination'
+import { Pagination } from '@/components/common/Pagination'
 import { useDebounce } from '@/hooks'
 import { UnifiedLoader } from '@/components/common/UnifiedLoader'
 
@@ -374,16 +374,16 @@ export const AttendancePage: React.FC = () => {
         </div>
 
         {totalCount > 0 && (
-          <ModernPagination
+          <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
-            onPageChange={setCurrentPage}
+            totalItems={totalCount}
             itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
             onItemsPerPageChange={(size) => {
               setItemsPerPage(size)
               setCurrentPage(1)
             }}
-            itemsPerPageOptions={[6, 8, 12, 16]}
           />
         )}
       </div>

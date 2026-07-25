@@ -2,7 +2,7 @@ import React from 'react'
 import { EmployeeCard } from '@/components/employees/EmployeeCard'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
-import { ModernPagination } from '@/components/common/ModernPagination'
+import { Pagination } from '@/components/common/Pagination'
 import { AlertCircle } from 'lucide-react'
 import { Employee } from '@/types'
 import { Alert } from '@/components/common/Alert'
@@ -34,6 +34,7 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
   currentPage = 1,
   totalPages = 1,
   itemsPerPage = 6,
+  totalItems = 0,
   onPageChange,
   onItemsPerPageChange,
 }) => {
@@ -94,9 +95,10 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
 
       {/* Pagination */}
       {totalPages > 1 && onPageChange && (
-        <ModernPagination
+        <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
+          totalItems={totalItems}
           itemsPerPage={itemsPerPage}
           onPageChange={onPageChange}
           onItemsPerPageChange={onItemsPerPageChange}

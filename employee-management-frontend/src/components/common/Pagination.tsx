@@ -8,7 +8,7 @@ interface PaginationProps {
   totalItems: number
   itemsPerPage: number
   onPageChange: (page: number) => void
-  onItemsPerPageChange: (items: number) => void
+  onItemsPerPageChange?: (items: number) => void
 }
 
 export const Pagination: React.FC<PaginationProps> = ({
@@ -62,22 +62,24 @@ export const Pagination: React.FC<PaginationProps> = ({
       {/* Pagination Controls */}
       <div className="flex items-center gap-md">
         {/* Rows per page selector */}
-        <div className="flex items-center gap-sm">
-          <label htmlFor="items-per-page" className="text-sm text-text-secondary">
-            Rows per page:
-          </label>
-          <select
-            id="items-per-page"
-            value={itemsPerPage}
-            onChange={e => onItemsPerPageChange(Number(e.target.value))}
-            className="px-md py-xs rounded border border-border bg-background text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            <option value={6}>6</option>
-            <option value={12}>12</option>
-            <option value={18}>18</option>
-            <option value={24}>24</option>
-          </select>
-        </div>
+        {onItemsPerPageChange && (
+          <div className="flex items-center gap-sm">
+            <label htmlFor="items-per-page" className="text-sm text-text-secondary">
+              Rows per page:
+            </label>
+            <select
+              id="items-per-page"
+              value={itemsPerPage}
+              onChange={e => onItemsPerPageChange(Number(e.target.value))}
+              className="px-md py-xs rounded border border-border bg-background text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value={6}>6</option>
+              <option value={12}>12</option>
+              <option value={18}>18</option>
+              <option value={24}>24</option>
+            </select>
+          </div>
+        )}
 
         {/* Navigation */}
         <div className="flex items-center gap-xs">
