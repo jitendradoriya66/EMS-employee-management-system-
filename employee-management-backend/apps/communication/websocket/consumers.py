@@ -40,6 +40,19 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 self.channel_name
             )
 
+        # Broadcast presence connection to all user's conversations
+        if self.channel_layer:
+            for conversation_id in self.conversations:
+                await self.channel_layer.group_send(
+                    f"conversation_{conversation_id}",
+                    {
+                        "type": "chat.presence",
+                        "user_id": str(self.user.id),
+                        "email": self.user.email,
+                        "is_online": True
+                    }
+                )
+
         await self.accept()
 
     async def disconnect(self, close_code):
@@ -47,12 +60,22 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             # User is offline, update presence
             await self.update_user_online_status(self.user, is_online=False)
 
-            # Leave conversation groups
-            for conversation_id in self.conversations:
-                await self.channel_layer.group_discard(
-                    f"conversation_{conversation_id}",
-                    self.channel_name
-                )
+            # Leave conversation groups and broadcast offline presence
+            if self.channel_layer:
+                for conversation_id in self.conversations:
+                    await self.channel_layer.group_send(
+                        f"conversation_{conversation_id}",
+                        {
+                            "type": "chat.presence",
+                            "user_id": str(self.user.id),
+                            "email": self.user.email,
+                            "is_online": False
+                        }
+                    )
+                    await self.channel_layer.group_discard(
+                        f"conversation_{conversation_id}",
+                        self.channel_name
+                    )
             
             # Leave user specific group
             await self.channel_layer.group_discard(
@@ -221,34 +244,11 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def update_user_online_status(self, user, is_online):
         from django.core.cache import cache
-        from asgiref.sync import async_to_sync
-        from channels.layers import get_channel_layer
-        
         cache_key = f"user_online_{user.id}"
         if is_online:
             cache.set(cache_key, True, 600)  # Active presence TTL of 10 minutes
         else:
             cache.delete(cache_key)
-
-        channel_layer = get_channel_layer()
-        if channel_layer:
-            # Query the user's active conversations dynamically
-            from apps.communication.models.conversation import ConversationMember
-            conversation_ids = list(ConversationMember.objects.filter(
-                user=user,
-                deleted_at__isnull=True
-            ).values_list('conversation_id', flat=True))
-            
-            for convo_id in conversation_ids:
-                async_to_sync(channel_layer.group_send)(
-                    f"conversation_{convo_id}",
-                    {
-                        "type": "chat.presence",
-                        "user_id": str(user.id),
-                        "email": user.email,
-                        "is_online": is_online
-                    }
-                )
 
     @database_sync_to_async
     def mark_db_message_read(self, user, message_id):
