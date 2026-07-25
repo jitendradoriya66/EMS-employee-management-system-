@@ -83,6 +83,7 @@ export const Pagination: React.FC<PaginationProps> = ({
         <div className="flex items-center gap-xs">
           {/* Previous Button */}
           <button
+            type="button"
             onClick={() => onPageChange(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
             className="p-xs rounded border border-border hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -107,6 +108,7 @@ export const Pagination: React.FC<PaginationProps> = ({
               return (
                 <button
                   key={page}
+                  type="button"
                   onClick={() => onPageChange(page as number)}
                   className={cn(
                     'px-md py-xs rounded text-sm font-medium transition-colors',
@@ -123,6 +125,7 @@ export const Pagination: React.FC<PaginationProps> = ({
 
           {/* Next Button */}
           <button
+            type="button"
             onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage === totalPages}
             className="p-xs rounded border border-border hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed transition-colors"

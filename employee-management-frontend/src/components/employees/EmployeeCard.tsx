@@ -30,7 +30,7 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
       onClick={onClick}
     >
       {/* Header with Status Badge */}
-      <div className="relative h-20 bg-gradient-to-r from-primary-50 to-primary-100 dark:from-slate-800 dark:to-slate-700 border-b border-primary-100 dark:border-slate-700">
+      <div className="relative h-20 bg-gradient-to-r from-primary-50 to-primary-100 dark:from-slate-800 dark:to-slate-700 border-b border-primary-100 dark:border-slate-700 rounded-t-2xl">
         <div className="absolute top-md right-md z-10">
           <Badge variant={getStatusColor(employee.status).replace('badge-', '') as any}>
             {getStatusLabel(employee.status)}

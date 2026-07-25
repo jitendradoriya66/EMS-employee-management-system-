@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Download, FileText, Printer, Mail, CalendarClock, ShieldCheck, Clock3, Users, TrendingUp } from 'lucide-react'
 import { useEmployees } from '@/hooks/useEmployees'
 import { Button } from '@/components/common/Button'
+import { UnifiedLoader } from '@/components/common/UnifiedLoader'
 
 interface ReportMetric {
   label: string
@@ -91,7 +92,7 @@ export const ReportsPage: React.FC = () => {
     window.print()
   }
 
-  if (loading) return <div className="p-xl text-center text-text-secondary">Loading reports...</div>;
+  if (loading) return <UnifiedLoader message="Loading reports..." />;
 
   return (
     <motion.div

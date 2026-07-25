@@ -357,22 +357,42 @@ export const LeavePage: React.FC = () => {
           <Clock3 className="h-5 w-5 text-primary-600" />
         </div>
 
-        <div className="mt-md grid grid-cols-1 gap-sm sm:grid-cols-2 xl:grid-cols-3">
-          {reviewedLeaves.map(request => (
-            <div key={request.id} className="rounded-2xl border border-border bg-background p-md">
-              <div className="flex items-center justify-between gap-md">
-                <div>
-                  <p className="font-semibold text-text-primary">{request.employeeName}</p>
-                  <p className="text-sm text-text-secondary">{request.department}</p>
-                </div>
-                <span className={`text-xs font-bold uppercase tracking-widest ${request.status === 'approved' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {request.status}
-                </span>
-              </div>
-              <p className="mt-sm text-sm text-text-secondary">{request.reason}</p>
-            </div>
-          ))}
-          {!loading && reviewedTotalCount === 0 && <p className="text-sm text-text-secondary col-span-full">No reviewed requests found.</p>}
+        <div className="mt-md overflow-x-auto rounded-2xl border border-border">
+          <table className="w-full border-collapse text-left">
+            <thead>
+              <tr className="bg-slate-50 dark:bg-slate-800/40 text-text-secondary text-xs uppercase font-semibold border-b border-border">
+                <th className="px-lg py-md">Employee</th>
+                <th className="px-lg py-md">Department</th>
+                <th className="px-lg py-md">Start Date</th>
+                <th className="px-lg py-md">End Date</th>
+                <th className="px-lg py-md">Reason</th>
+                <th className="px-lg py-md text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border text-sm text-text-primary">
+              {reviewedLeaves.map(request => (
+                <tr key={request.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20">
+                  <td className="px-lg py-md font-semibold">{request.employeeName}</td>
+                  <td className="px-lg py-md text-text-secondary">{request.department}</td>
+                  <td className="px-lg py-md text-text-secondary">{formatDate(request.start_date)}</td>
+                  <td className="px-lg py-md text-text-secondary">{formatDate(request.end_date)}</td>
+                  <td className="px-lg py-md max-w-xs truncate" title={request.reason}>{request.reason}</td>
+                  <td className="px-lg py-md text-right">
+                    <span className={`inline-flex items-center px-sm py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider ${
+                      request.status === 'approved' 
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-300' 
+                        : 'bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-300'
+                    }`}>
+                      {request.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!loading && reviewedTotalCount === 0 && (
+            <p className="text-sm text-text-secondary p-lg text-center">No reviewed requests found.</p>
+          )}
         </div>
         
         {reviewedTotalCount > 0 && (

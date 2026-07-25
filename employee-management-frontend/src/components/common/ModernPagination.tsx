@@ -84,6 +84,7 @@ export const ModernPagination: React.FC<ModernPaginationProps> = ({
             return (
               <button
                 key={pageNum}
+                type="button"
                 onClick={() => onPageChange(pageNum)}
                 className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-semibold transition-all ${
                   isActive 

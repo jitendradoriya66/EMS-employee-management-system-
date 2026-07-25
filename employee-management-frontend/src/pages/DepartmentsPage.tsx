@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { Building2, Users, BriefcaseBusiness, TrendingUp, ShieldCheck, X, Network, Edit2, Trash2, Eye } from 'lucide-react'
-import { Badge } from '@/components/common/Badge'
+import { Building2, Users, BriefcaseBusiness, TrendingUp, X, Network, Edit2, Trash2, Eye } from 'lucide-react'
 import { Button } from '@/components/common/Button'
 import { useDepartments } from '@/hooks/useDepartments'
 import { getDepartmentColor } from '@/utils/helpers'
@@ -9,6 +8,7 @@ import { Input } from '@/components/common/Input'
 import { Alert } from '@/components/common/Alert'
 import { AnimatePresence } from 'framer-motion'
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
+import { UnifiedLoader } from '@/components/common/UnifiedLoader'
 
 export const DepartmentsPage: React.FC = () => {
   const { departments, loading, addDepartment, updateDepartment, deleteDepartment } = useDepartments()
@@ -39,7 +39,7 @@ export const DepartmentsPage: React.FC = () => {
   const totalEmployees = departmentStats.reduce((sum, item) => sum + item.count, 0)
 
   if (loading) {
-    return <div className="p-xl text-center text-text-secondary">Loading departments...</div>
+    return <UnifiedLoader message="Loading departments..." />
   }
 
   return (
@@ -155,9 +155,6 @@ export const DepartmentsPage: React.FC = () => {
                 <p className="mt-xs text-sm text-text-secondary">Managed by {item.manager}</p>
               </div>
               <div className="flex flex-col items-end gap-sm">
-                <div className="rounded-2xl bg-primary-50 p-sm text-primary-700 dark:bg-primary-500/15 dark:text-cyan-200">
-                  <ShieldCheck className="h-5 w-5" />
-                </div>
                 <div className="flex gap-xs">
                   <button
                     onClick={() => setViewingDept(item)}
@@ -192,24 +189,6 @@ export const DepartmentsPage: React.FC = () => {
               <div className="rounded-2xl border border-border bg-background p-md">
                 <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Open roles</p>
                 <p className="mt-xs text-2xl font-extrabold text-text-primary">{item.openRoles}</p>
-              </div>
-            </div>
-
-            <div className="mt-md rounded-2xl border border-border bg-background p-md">
-              <div className="flex items-center justify-between gap-md">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Team health</p>
-                  <p className="mt-xs text-sm text-text-primary">Visible, organized, and easy to manage</p>
-                </div>
-                <Badge variant={item.count >= 3 ? 'success' : 'warning'}>
-                  {item.count >= 3 ? 'Healthy' : 'Review'}
-                </Badge>
-              </div>
-              <div className="mt-md h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-primary-500 to-cyan-400"
-                  style={{ width: `${Math.min(100, item.count * 18)}%` }}
-                />
               </div>
             </div>
           </motion.div>

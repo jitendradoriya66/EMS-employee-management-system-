@@ -217,13 +217,13 @@ export const ApprovalsPage: React.FC = () => {
                     <CircleCheck className="h-4 w-4" />
                     Approve
                   </Button>
-                  <Button variant="secondary" className="px-md text-red-600 hover:bg-red-50 hover:border-red-200 dark:hover:bg-red-950/30" onClick={() => setConfirmReject(user)} aria-label="Reject">
+                  <Button variant="ghost" className="px-md text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 border border-rose-500/30 dark:border-rose-500/20" onClick={() => setConfirmReject(user)} aria-label="Reject">
                     <CircleX className="h-4 w-4" />
                   </Button>
                 </div>
               </article>
             )) : (
-              <div className="rounded-3xl border border-dashed border-border bg-card p-xl text-center shadow-sm lg:col-span-2">
+              <div className="rounded-3xl border border-dashed border-border bg-card p-xl text-center shadow-sm md:col-span-2 lg:col-span-3">
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-50 text-primary-700 dark:bg-primary-500/15 dark:text-cyan-200">
                   <ShieldCheck className="h-6 w-6" />
                 </div>
