@@ -29,6 +29,8 @@ class ChatSocketManager {
         const isSecure = window.location.protocol === 'https:';
         host = (isSecure ? 'wss://' : 'ws://') + host;
       }
+      // Strip any trailing /ws or /ws/ from the host to prevent duplication
+      host = host.replace(/\/ws\/?$/i, '');
       this.url = host.endsWith('/') ? `${host}ws/communication/chat/` : `${host}/ws/communication/chat/`;
     } else {
       const isSecure = window.location.protocol === 'https:';
