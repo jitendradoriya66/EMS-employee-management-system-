@@ -31,13 +31,13 @@ export const mapBackendUserToAccount = (backendUser: any): UserAccount => {
     id: backendUser.id.toString(),
     name: `${backendUser.first_name} ${backendUser.last_name}`.trim(),
     email: backendUser.email,
-    password: '', // Don't store passwords in state
-    department: 'Unassigned', // Backend doesn't provide this by default
-    role: backendUser.is_superuser ? 'super_admin' : (backendUser.is_staff ? 'admin_hr' : 'employee'),
+    password: '',
+    department: backendUser.department || 'Unassigned',
+    role: backendUser.role || (backendUser.is_superuser ? 'super_admin' : (backendUser.is_staff ? 'admin_hr' : 'employee')),
     approvalStatus: backendUser.is_active ? 'approved' : 'pending',
     accountStatus: backendUser.is_active ? 'active' : 'inactive',
     registrationDate: backendUser.date_joined || new Date().toISOString(),
-    lastLogin: null, // Update if backend provides last_login
+    lastLogin: backendUser.last_login || null,
   }
 }
 
@@ -294,7 +294,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await apiClient.patch(`/api/v1/users/${userId}/`, {
         first_name,
         last_name,
-        email: data.email
+        email: data.email,
+        department: data.department
       })
       const currentUser = users.find(account => account.id === userId)
       if (!currentUser) return

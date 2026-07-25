@@ -29,6 +29,7 @@ import { Input } from '@/components/common/Input'
 import { Select } from '@/components/common/Select'
 import { Pagination } from '@/components/common/Pagination'
 import { useAuth } from '@/contexts/AuthContext'
+import { useDepartments } from '@/hooks/useDepartments'
 import type { UserAccount, UserRole } from '@/types'
 
 const roleLabels: Record<UserRole, string> = {
@@ -106,6 +107,14 @@ export const UserManagementPage: React.FC = () => {
   const [editFormData, setEditFormData] = useState({ name: '', email: '', department: '' })
   
   const { users, fetchUsers, approveUser, rejectUser, toggleUserStatus, deleteUser, updateUserRole, updateUserDetails } = useAuth()
+  const { departments } = useDepartments()
+
+  const departmentOptions = useMemo(() => {
+    return [
+      { value: 'Unassigned', label: 'No Department (Unassigned)' },
+      ...departments.map(d => ({ value: d.name, label: d.name }))
+    ]
+  }, [departments])
 
   useEffect(() => {
     fetchUsers()
@@ -752,10 +761,11 @@ export const UserManagementPage: React.FC = () => {
                     value={editFormData.email}
                     onChange={e => setEditFormData(prev => ({ ...prev, email: e.target.value }))}
                   />
-                  <Input
+                  <Select
                     label="Department"
                     value={editFormData.department}
                     onChange={e => setEditFormData(prev => ({ ...prev, department: e.target.value }))}
+                    options={departmentOptions}
                   />
                 </div>
 
