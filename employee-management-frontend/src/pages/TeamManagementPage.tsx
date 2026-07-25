@@ -1044,7 +1044,7 @@ export const TeamManagementPage: React.FC = () => {
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }}
-              className="flex-1 flex"
+              className="flex-1 flex overflow-hidden"
             >
               {activeChatId ? (
                 <div className="flex-1 flex overflow-hidden">
