@@ -146,6 +146,44 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             "call_data": event["call_data"]
         })
 
+    async def chat_call_answered(self, event):
+        # Forward call answered event in real-time
+        await self.send_json({
+            "type": "call_answered",
+            "call_data": event["call_data"]
+        })
+
+    async def chat_call_rejected(self, event):
+        # Forward call rejected event in real-time
+        await self.send_json({
+            "type": "call_rejected",
+            "call_data": event["call_data"]
+        })
+
+    async def chat_call_ended(self, event):
+        # Forward call ended event in real-time
+        await self.send_json({
+            "type": "call_ended",
+            "call_data": event["call_data"]
+        })
+
+    async def chat_read_all(self, event):
+        # Forward read all event in real-time
+        await self.send_json({
+            "type": "read_all",
+            "conversation_id": event["conversation_id"],
+            "user_id": event["user_id"]
+        })
+
+    async def chat_presence(self, event):
+        # Forward user presence event in real-time
+        await self.send_json({
+            "type": "presence",
+            "user_id": event["user_id"],
+            "email": event["email"],
+            "is_online": event["is_online"]
+        })
+
     async def chat_rtc_signal(self, event):
         # Forward WebRTC signaling payload in real-time
         await self.send_json({
@@ -182,9 +220,35 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
     @database_sync_to_async
     def update_user_online_status(self, user, is_online):
-        # We can implement Redis status update or cache flags here.
-        # Since cache details depend on backend config, we will mock/provide basic status logging for now.
-        pass
+        from django.core.cache import cache
+        from asgiref.sync import async_to_sync
+        from channels.layers import get_channel_layer
+        
+        cache_key = f"user_online_{user.id}"
+        if is_online:
+            cache.set(cache_key, True, 600)  # Active presence TTL of 10 minutes
+        else:
+            cache.delete(cache_key)
+
+        channel_layer = get_channel_layer()
+        if channel_layer:
+            # Query the user's active conversations dynamically
+            from apps.communication.models.conversation import ConversationMember
+            conversation_ids = list(ConversationMember.objects.filter(
+                user=user,
+                deleted_at__isnull=True
+            ).values_list('conversation_id', flat=True))
+            
+            for convo_id in conversation_ids:
+                async_to_sync(channel_layer.group_send)(
+                    f"conversation_{convo_id}",
+                    {
+                        "type": "chat.presence",
+                        "user_id": str(user.id),
+                        "email": user.email,
+                        "is_online": is_online
+                    }
+                )
 
     @database_sync_to_async
     def mark_db_message_read(self, user, message_id):
@@ -203,3 +267,4 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 receipt.save(update_fields=['status', 'read_at', 'updated_at'])
         except Exception:
             pass
+

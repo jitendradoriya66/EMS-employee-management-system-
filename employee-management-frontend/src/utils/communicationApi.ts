@@ -103,3 +103,9 @@ export const cancelMeeting = async (meetingId: string) => {
   const response = await apiClient.post(`/api/v1/communication/meetings/${meetingId}/cancel/`)
   return response.data
 }
+
+export const markConversationRead = async (conversationId: string) => {
+  const response = await apiClient.post(`/api/v1/communication/conversations/${conversationId}/mark_read/`)
+  return response.data
+}
+

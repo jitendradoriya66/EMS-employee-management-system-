@@ -83,6 +83,28 @@ class CallService:
                 participant.joined_at = timezone.now()
                 participant.save(update_fields=['left_at', 'joined_at', 'updated_at'])
 
+        try:
+            from asgiref.sync import async_to_sync
+            from channels.layers import get_channel_layer
+            
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                async_to_sync(channel_layer.group_send)(
+                    f"conversation_{call.conversation.id}",
+                    {
+                        "type": "chat.call_answered",
+                        "call_data": {
+                            "id": str(call.id),
+                            "status": call.status,
+                            "user_id": str(user.id),
+                            "user_name": f"{user.first_name} {user.last_name}".strip(),
+                            "conversation_id": str(call.conversation.id)
+                        }
+                    }
+                )
+        except Exception:
+            pass
+
         return call
 
     @staticmethod
@@ -95,6 +117,39 @@ class CallService:
             call.status = Call.STATUS_REJECTED
             call.end_time = timezone.now()
             call.save(update_fields=['status', 'end_time', 'updated_at'])
+
+        try:
+            from asgiref.sync import async_to_sync
+            from channels.layers import get_channel_layer
+            
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                async_to_sync(channel_layer.group_send)(
+                    f"conversation_{call.conversation.id}",
+                    {
+                        "type": "chat.call_rejected",
+                        "call_data": {
+                            "id": str(call.id),
+                            "status": call.status,
+                            "user_id": str(user.id),
+                            "conversation_id": str(call.conversation.id)
+                        }
+                    }
+                )
+        except Exception:
+            pass
+
+        try:
+            from apps.communication.services.message import MessageService
+            text = f"Declined {call.type} call"
+            MessageService.send_message(
+                sender=call.host,
+                conversation=call.conversation,
+                text=text
+            )
+        except Exception:
+            pass
+
         return call
 
     @staticmethod
@@ -107,7 +162,10 @@ class CallService:
             return call
 
         with transaction.atomic():
-            call.status = Call.STATUS_COMPLETED
+            if call.status == Call.STATUS_RINGING:
+                call.status = Call.STATUS_MISSED
+            else:
+                call.status = Call.STATUS_COMPLETED
             call.end_time = timezone.now()
             
             # Calculate duration
@@ -124,4 +182,41 @@ class CallService:
                 left_at=timezone.now()
             )
 
+        try:
+            from asgiref.sync import async_to_sync
+            from channels.layers import get_channel_layer
+            
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                async_to_sync(channel_layer.group_send)(
+                    f"conversation_{call.conversation.id}",
+                    {
+                        "type": "chat.call_ended",
+                        "call_data": {
+                            "id": str(call.id),
+                            "status": call.status,
+                            "conversation_id": str(call.conversation.id)
+                        }
+                    }
+                )
+        except Exception:
+            pass
+
+        try:
+            from apps.communication.services.message import MessageService
+            minutes = call.duration // 60
+            seconds = call.duration % 60
+            if call.status == Call.STATUS_MISSED:
+                text = f"Missed {call.type} call"
+            else:
+                text = f"{call.type.capitalize()} call ended • {minutes:02d}:{seconds:02d}"
+            MessageService.send_message(
+                sender=call.host,
+                conversation=call.conversation,
+                text=text
+            )
+        except Exception:
+            pass
+
         return call
+

@@ -160,6 +160,48 @@ class ConversationViewSet(viewsets.ModelViewSet):
         ConversationService.archive_conversation(conversation.id, request.user)
         return Response({"message": "Conversation archived successfully."}, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def mark_read(self, request, pk=None):
+        conversation = self.get_object()
+        from apps.communication.models.message import Message, MessageReceipt
+        from django.utils import timezone
+        
+        messages = Message.objects.filter(
+            conversation=conversation,
+            deleted_at__isnull=True
+        ).exclude(sender=request.user)
+        
+        for msg in messages:
+            receipt, created = MessageReceipt.objects.get_or_create(
+                message=msg,
+                user=request.user,
+                defaults={'status': MessageReceipt.STATUS_READ, 'read_at': timezone.now()}
+            )
+            if not created and receipt.status != MessageReceipt.STATUS_READ:
+                receipt.status = MessageReceipt.STATUS_READ
+                receipt.read_at = timezone.now()
+                receipt.save(update_fields=['status', 'read_at', 'updated_at'])
+            
+        try:
+            from asgiref.sync import async_to_sync
+            from channels.layers import get_channel_layer
+            
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                async_to_sync(channel_layer.group_send)(
+                    f"conversation_{conversation.id}",
+                    {
+                        "type": "chat.read_all",
+                        "conversation_id": str(conversation.id),
+                        "user_id": str(request.user.id)
+                    }
+                )
+        except Exception:
+            pass
+            
+        return Response({"message": "All messages marked as read."}, status=status.HTTP_200_OK)
+
+
 class MessageViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsEmployeeRole]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]

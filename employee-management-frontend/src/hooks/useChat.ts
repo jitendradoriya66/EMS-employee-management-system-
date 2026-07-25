@@ -5,7 +5,7 @@ import {
   sendMessage as sendApiMessage,
   deleteMessage as deleteApiMessage,
   reactToMessage as reactApiMessage,
-  markMessageRead as readApiMessage
+  markConversationRead
 } from '@/utils/communicationApi'
 import { socketManager } from '@/utils/websocket'
 import { useAuth } from '@/contexts/AuthContext'
@@ -17,12 +17,24 @@ export function useChat(activeConversationId: string | null) {
   const [loading, setLoading] = useState(false)
   const [typingUsers, setTypingUsers] = useState<Record<string, boolean>>({})
   const [onlineStatus, setOnlineStatus] = useState<'connected' | 'disconnected'>('disconnected')
+  const [onlineUsers, setOnlineUsers] = useState<Record<string, boolean>>({})
 
   // Load conversations
   const loadConversations = useCallback(async () => {
     try {
       const data = await fetchConversations()
       setConversations(data)
+
+      // Initialize online status map
+      const initialOnline: Record<string, boolean> = {}
+      data.forEach((c: any) => {
+        c.members?.forEach((m: any) => {
+          if (m.user?.email) {
+            initialOnline[m.user.email.toLowerCase()] = m.is_online || false
+          }
+        })
+      })
+      setOnlineUsers((prev) => ({ ...prev, ...initialOnline }))
     } catch (e) {
       console.error('Failed to load conversations', e)
     }
@@ -55,7 +67,8 @@ export function useChat(activeConversationId: string | null) {
         file_type: fileType,
         reply_to: replyTo,
         is_pending: true,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        sender: { id: user?.id, name: user?.name || 'User' }
       }
       setMessages((prev) => [...prev, optimisticMsg])
 
@@ -73,7 +86,7 @@ export function useChat(activeConversationId: string | null) {
     } catch (e) {
       console.error('Failed to send message', e)
     }
-  }, [activeConversationId, loadConversations])
+  }, [activeConversationId, loadConversations, user])
 
   // Action: delete message
   const deleteMessage = useCallback(async (messageId: string) => {
@@ -115,18 +128,36 @@ export function useChat(activeConversationId: string | null) {
     }
   }, [])
 
-  // Action: mark read
-  const markRead = useCallback(async (messageId: string) => {
+  // Action: mark conversation read
+  const markRead = useCallback(async (conversationId: string) => {
     try {
-      await readApiMessage(messageId)
-      // Notify WS
-      if (activeConversationId) {
-        socketManager.sendReadReceipt(activeConversationId, messageId)
-      }
+      await markConversationRead(conversationId)
+      // Local state update: reset unread count of that conversation
+      setConversations((prev) =>
+        prev.map((c) => (c.id === conversationId ? { ...c, unread_count: 0 } : c))
+      )
     } catch (e) {
-      console.error('Failed to mark message as read', e)
+      console.error('Failed to mark conversation as read', e)
     }
-  }, [activeConversationId])
+  }, [])
+
+  // Auto-mark conversation as read when active conversation ID changes
+  useEffect(() => {
+    if (activeConversationId) {
+      markRead(activeConversationId)
+    }
+  }, [activeConversationId, markRead])
+
+  // Auto-mark conversation as read when a new message arrives in active conversation
+  useEffect(() => {
+    if (activeConversationId && messages.length > 0) {
+      const lastMsg = messages[messages.length - 1]
+      // Only mark read if the last message is from someone else and not pending
+      if (lastMsg && lastMsg.sender?.id !== user?.id && !lastMsg.is_pending) {
+        markRead(activeConversationId)
+      }
+    }
+  }, [messages.length, activeConversationId, markRead, user?.id])
 
   // Setup WebSockets & subscriptions
   useEffect(() => {
@@ -143,6 +174,13 @@ export function useChat(activeConversationId: string | null) {
         ? String(data.message.conversation?.id)
         : String(data.message?.conversation)
       const currentConvoId = String(activeConversationId)
+      
+      console.log('[WebSocket] Message received:', {
+        message: data.message,
+        msgConvoId,
+        currentConvoId,
+        match: msgConvoId === currentConvoId
+      })
 
       if (data.message && msgConvoId === currentConvoId) {
         setMessages((prev) => {
@@ -182,11 +220,41 @@ export function useChat(activeConversationId: string | null) {
       }
     })
 
+    const unsubReadAll = socketManager.on('read_all', (data) => {
+      if (data.conversation_id === activeConversationId) {
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.sender?.id !== data.user_id) {
+              const receipts = m.receipts || []
+              if (!receipts.some((r: any) => r.user?.id === data.user_id)) {
+                return {
+                  ...m,
+                  receipts: [...receipts, { user: { id: data.user_id }, status: 'read' }]
+                }
+              }
+            }
+            return m
+          })
+        )
+      }
+    })
+
+    const unsubPresence = socketManager.on('presence', (data) => {
+      if (data.email) {
+        setOnlineUsers((prev) => ({
+          ...prev,
+          [data.email.toLowerCase()]: data.is_online
+        }))
+      }
+    })
+
     return () => {
       unsubStatus()
       unsubMsg()
       unsubTyping()
       unsubReceipt()
+      unsubReadAll()
+      unsubPresence()
     }
   }, [activeConversationId, loadConversations, isAuthenticated, user])
 
@@ -211,6 +279,7 @@ export function useChat(activeConversationId: string | null) {
     loading,
     typingUsers,
     onlineStatus,
+    onlineUsers,
     loadConversations,
     sendMessage,
     deleteMessage,
@@ -218,3 +287,4 @@ export function useChat(activeConversationId: string | null) {
     markRead
   }
 }
+

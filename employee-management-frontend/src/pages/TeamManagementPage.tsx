@@ -22,7 +22,8 @@ import {
   initiateCall,
   answerCall,
   rejectCall,
-  endCall
+  endCall,
+  addGroupMember
 } from '@/utils/communicationApi'
 
 export interface ChatMessage {
@@ -87,6 +88,7 @@ export const TeamManagementPage: React.FC = () => {
     messages: chatMessages,
     loading: messagesLoading,
     typingUsers: activeTypingUsers,
+    onlineUsers,
     loadConversations,
     sendMessage: sendChatMessage,
     reactToMessage: reactChatEmoji
@@ -107,7 +109,10 @@ export const TeamManagementPage: React.FC = () => {
         description,
         members: c.members?.map((m: any) => m.user?.id) || [],
         createdAt: c.created_at,
-        isPinned: c.is_archived
+        isPinned: c.is_archived,
+        unreadCount: c.unread_count || 0,
+        lastMessageText: c.last_message ? c.last_message.text : '',
+        lastMessageTime: c.last_message ? new Date(c.last_message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
       }
     })
   }, [conversations, user?.id])
@@ -146,6 +151,7 @@ export const TeamManagementPage: React.FC = () => {
     isScreenSharing: boolean
     isHandRaised: boolean
     isIncoming?: boolean
+    conversationId?: string
   } | null>(null)
 
   // Prevent body scrolling on laptop/desktop viewports
@@ -206,18 +212,58 @@ export const TeamManagementPage: React.FC = () => {
         osc.start()
         osc.stop(audioCtx.currentTime + 0.12)
       } else if (type === 'incoming') {
-        osc.type = 'triangle'
-        osc.frequency.setValueAtTime(523.25, audioCtx.currentTime)
-        osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.08)
-        gain.gain.setValueAtTime(0.12, audioCtx.currentTime)
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3)
+        // Double ring sound
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(480, audioCtx.currentTime)
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime)
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime + 0.4)
+        gain.gain.setValueAtTime(0.01, audioCtx.currentTime + 0.45)
+        
+        osc.frequency.setValueAtTime(480, audioCtx.currentTime + 0.5)
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime + 0.5)
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime + 0.9)
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.95)
+        
         osc.start()
-        osc.stop(audioCtx.currentTime + 0.3)
+        osc.stop(audioCtx.currentTime + 1.0)
+      } else if (type === 'calling') {
+        // Slow outgoing calling sound
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(440, audioCtx.currentTime)
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime)
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime + 1.2)
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.4)
+        
+        osc.start()
+        osc.stop(audioCtx.currentTime + 1.45)
       }
     } catch (e) {
       console.warn(e)
     }
   }
+
+  // Ringtone loop
+  useEffect(() => {
+    if (!activeCall || activeCall.status !== 'ringing') return
+
+    const playLoop = () => {
+      if (activeCall.isIncoming) {
+        playSound('incoming')
+      } else {
+        playSound('calling')
+      }
+    }
+
+    playLoop()
+
+    const intervalTime = activeCall.isIncoming ? 2000 : 3000
+    const ringInterval = setInterval(playLoop, intervalTime)
+
+    return () => {
+      clearInterval(ringInterval)
+    }
+  }, [activeCall?.status, activeCall?.isIncoming])
+
 
   const files = useMemo(() => {
     return chatMessages
@@ -249,13 +295,13 @@ export const TeamManagementPage: React.FC = () => {
     const typingNames = Object.keys(activeTypingUsers).filter(name => activeTypingUsers[name])
     return typingNames.length > 0 ? typingNames[0] : null
   }, [activeTypingUsers])
-  const [unreads, setUnreads] = useState<Record<string, number>>({})
 
   // Modals & Panels Control
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [showRightPanel, setShowRightPanel] = useState(true)
   const [groupForm, setGroupForm] = useState({ name: '', description: '', members: [] as string[] })
+  const [selectedMemberToAdd, setSelectedMemberToAdd] = useState<string>('')
   const [meetingForm, setMeetingForm] = useState({ title: '', time: '11:00 AM', date: new Date().toISOString().slice(0, 10), attendees: [] as string[] })
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -268,6 +314,56 @@ export const TeamManagementPage: React.FC = () => {
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null)
   const remoteStreamRef = useRef<MediaStream | null>(null)
 
+  // Queues & references to fix race conditions and stale closures
+  const pendingSignalsRef = useRef<any[]>([])
+  const pendingCandidatesRef = useRef<any[]>([])
+  const activeCallRef = useRef<any>(null)
+  const typingTimeoutRef = useRef<any>(null)
+  const isTypingRef = useRef(false)
+
+  useEffect(() => {
+    activeCallRef.current = activeCall
+  }, [activeCall])
+
+  const processPendingSignals = async (pc: RTCPeerConnection) => {
+    while (pendingSignalsRef.current.length > 0) {
+      const data = pendingSignalsRef.current.shift()
+      const { sdp, candidate } = data.signal_data || {}
+      if (sdp) {
+        await pc.setRemoteDescription(new RTCSessionDescription(sdp))
+        if (sdp.type === 'offer') {
+          const answer = await pc.createAnswer()
+          await pc.setLocalDescription(answer)
+          socketManager.send({
+            type: 'rtc_signal',
+            conversation_id: activeCallRef.current?.conversationId || activeChatId,
+            signal_data: { sdp: pc.localDescription, sessionId }
+          })
+          // Apply queued candidates
+          while (pendingCandidatesRef.current.length > 0) {
+            const cand = pendingCandidatesRef.current.shift()
+            try {
+              await pc.addIceCandidate(new RTCIceCandidate(cand))
+            } catch (e) {
+              console.error("Error adding queued candidate:", e)
+            }
+          }
+        }
+      } else if (candidate) {
+        if (pc.remoteDescription) {
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(candidate))
+          } catch (e) {
+            console.error("Error adding queued candidate:", e)
+          }
+        } else {
+          pendingCandidatesRef.current.push(candidate)
+        }
+      }
+    }
+  }
+
+  // WebRTC Connection Setup Effect
   useEffect(() => {
     if (activeCall && activeCall.status === 'connected') {
       navigator.mediaDevices.getUserMedia({
@@ -281,13 +377,21 @@ export const TeamManagementPage: React.FC = () => {
         }
 
         // Initialize RTCPeerConnection
-        const pc = new RTCPeerConnection({
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' }
-          ]
-        })
+        const iceServersJson = import.meta.env.VITE_ICE_SERVERS
+        let iceServers = [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' }
+        ]
+        if (iceServersJson) {
+          try {
+            iceServers = JSON.parse(iceServersJson)
+          } catch (e) {
+            console.error("Failed to parse VITE_ICE_SERVERS:", e)
+          }
+        }
+
+        const pc = new RTCPeerConnection({ iceServers })
         peerConnectionRef.current = pc
 
         // Stream local tracks
@@ -313,11 +417,30 @@ export const TeamManagementPage: React.FC = () => {
           if (event.candidate) {
             socketManager.send({
               type: 'rtc_signal',
-              conversation_id: activeChatId,
+              conversation_id: activeCall.conversationId || activeChatId,
               signal_data: { candidate: event.candidate, sessionId }
             })
           }
         }
+
+        pc.oniceconnectionstatechange = () => {
+          console.log("ICE Connection State:", pc.iceConnectionState)
+          if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+            console.warn("ICE connection failed/disconnected.")
+            setActiveCall(null)
+          }
+        }
+
+        pc.onconnectionstatechange = () => {
+          console.log("Connection State:", pc.connectionState)
+          if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+            console.warn("Connection failed/closed.")
+            setActiveCall(null)
+          }
+        }
+
+        // Process any queued signals
+        processPendingSignals(pc)
 
         // If the initiator, create the offer SDP payload
         if (activeCall.isIncoming === false) {
@@ -326,7 +449,7 @@ export const TeamManagementPage: React.FC = () => {
           }).then(() => {
             socketManager.send({
               type: 'rtc_signal',
-              conversation_id: activeChatId,
+              conversation_id: activeCall.conversationId || activeChatId,
               signal_data: { sdp: pc.localDescription, sessionId }
             })
           }).catch(err => console.error("Create offer error:", err))
@@ -339,49 +462,77 @@ export const TeamManagementPage: React.FC = () => {
         localStreamRef.current.getTracks().forEach(track => track.stop())
         localStreamRef.current = null
       }
+      if (remoteStreamRef.current) {
+        remoteStreamRef.current.getTracks().forEach(track => track.stop())
+        remoteStreamRef.current = null
+      }
       if (peerConnectionRef.current) {
         peerConnectionRef.current.close()
         peerConnectionRef.current = null
       }
-      remoteStreamRef.current = null
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = null
+      }
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = null
+      }
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = null
+      }
+      pendingSignalsRef.current = []
+      pendingCandidatesRef.current = []
     }
-  }, [activeCall?.status, activeCall?.type, activeChatId])
+  }, [activeCall?.id, activeCall?.status, activeCall?.type])
 
-  // Listen to remote signaling offers/answers and ICE candidates
+  // Listen to remote WebRTC signaling
   useEffect(() => {
     const unsubRtc = socketManager.on('rtc_signal', async (data: any) => {
       if (data.signal_data?.sessionId === sessionId) return
       const pc = peerConnectionRef.current
-      if (!pc) return
-
-      const { sdp, candidate } = data.signal_data || {}
-      if (sdp) {
-        await pc.setRemoteDescription(new RTCSessionDescription(sdp))
-        if (sdp.type === 'offer') {
-          const answer = await pc.createAnswer()
-          await pc.setLocalDescription(answer)
-          socketManager.send({
-            type: 'rtc_signal',
-            conversation_id: activeChatId,
-            signal_data: { sdp: pc.localDescription, sessionId }
-          })
-        } else if (sdp.type === 'answer') {
-          setActiveCall(prev => prev ? { ...prev, status: 'connected' } : null)
-          playSound('outgoing')
+      if (pc) {
+        const { sdp, candidate } = data.signal_data || {}
+        if (sdp) {
+          await pc.setRemoteDescription(new RTCSessionDescription(sdp))
+          if (sdp.type === 'offer') {
+            const answer = await pc.createAnswer()
+            await pc.setLocalDescription(answer)
+            socketManager.send({
+              type: 'rtc_signal',
+              conversation_id: activeCallRef.current?.conversationId || activeChatId,
+              signal_data: { sdp: pc.localDescription, sessionId }
+            })
+            // Apply queued candidates
+            while (pendingCandidatesRef.current.length > 0) {
+              const cand = pendingCandidatesRef.current.shift()
+              try {
+                await pc.addIceCandidate(new RTCIceCandidate(cand))
+              } catch (e) {
+                console.error("Error adding queued candidate:", e)
+              }
+            }
+          } else if (sdp.type === 'answer') {
+            setActiveCall(prev => prev ? { ...prev, status: 'connected' } : null)
+          }
+        } else if (candidate) {
+          if (pc.remoteDescription) {
+            try {
+              await pc.addIceCandidate(new RTCIceCandidate(candidate))
+            } catch (e) {
+              console.error("Error adding ice candidate:", e)
+            }
+          } else {
+            pendingCandidatesRef.current.push(candidate)
+          }
         }
-      } else if (candidate) {
-        try {
-          await pc.addIceCandidate(new RTCIceCandidate(candidate))
-        } catch (e) {
-          console.error("Error adding ice candidate:", e)
-        }
+      } else {
+        pendingSignalsRef.current.push(data)
       }
     })
     return () => {
       unsubRtc()
     }
   }, [activeChatId, sessionId])
-  
+
   // Call timer simulation
   useEffect(() => {
     let interval: any
@@ -391,14 +542,9 @@ export const TeamManagementPage: React.FC = () => {
       }, 1000)
     }
     return () => clearInterval(interval)
-  }, [activeCall])
+  }, [activeCall?.status])
 
-  // Reset unread count for current active chat
-  useEffect(() => {
-    if (activeChatId) {
-      setUnreads(prev => ({ ...prev, [activeChatId]: 0 }))
-    }
-  }, [activeChatId])
+
 
   const activeChatDetails = useMemo(() => {
     if (!activeChatId) return null
@@ -450,7 +596,6 @@ export const TeamManagementPage: React.FC = () => {
   useEffect(() => {
     const unsubCall = socketManager.on('call', (data: any) => {
       if (data.call_data && String(data.call_data.host_id) !== String(user?.id)) {
-        playSound('incoming')
         setActiveCall({
           id: String(data.call_data.id),
           type: data.call_data.type,
@@ -461,14 +606,39 @@ export const TeamManagementPage: React.FC = () => {
           isCameraOff: false,
           isScreenSharing: false,
           isHandRaised: false,
-          isIncoming: true
+          isIncoming: true,
+          conversationId: String(data.call_data.conversation_id)
         })
       }
     })
+
+    const unsubAnswered = socketManager.on('call_answered', (data: any) => {
+      if (activeCallRef.current && String(data.call_data.id) === String(activeCallRef.current.id)) {
+        setActiveCall(prev => prev ? { ...prev, status: 'connected' } : null)
+        playSound('outgoing')
+      }
+    })
+
+    const unsubRejected = socketManager.on('call_rejected', (data: any) => {
+      if (activeCallRef.current && String(data.call_data.id) === String(activeCallRef.current.id)) {
+        setActiveCall(null)
+      }
+    })
+
+    const unsubEnded = socketManager.on('call_ended', (data: any) => {
+      if (activeCallRef.current && String(data.call_data.id) === String(activeCallRef.current.id)) {
+        setActiveCall(null)
+      }
+    })
+
     return () => {
       unsubCall()
+      unsubAnswered()
+      unsubRejected()
+      unsubEnded()
     }
   }, [user?.id])
+
 
   const handleSendMessage = (textOverride?: string) => {
     const textToSend = textOverride || inputText
@@ -580,7 +750,8 @@ export const TeamManagementPage: React.FC = () => {
       isCameraOff: false,
       isScreenSharing: false,
       isHandRaised: false,
-      isIncoming: false
+      isIncoming: false,
+      conversationId: activeChatId || undefined
     })
 
     playSound('calling')
@@ -692,19 +863,24 @@ export const TeamManagementPage: React.FC = () => {
                       : 'hover:bg-background border-transparent'
                   }`}
                 >
-                  <div className="flex items-center gap-sm min-w-0">
+                  <div className="flex items-center gap-sm min-w-0 flex-1">
                     <div className="rounded-lg bg-primary-100 dark:bg-primary-900/40 p-xs text-primary shrink-0">
                       <Users className="h-4 w-4" />
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-text-primary truncate">{g.name}</p>
-                      <p className="text-[10px] text-text-secondary truncate">{g.description || 'General Discussion'}</p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-xs">
+                        <p className="text-sm font-semibold text-text-primary truncate">{g.name}</p>
+                        {g.lastMessageTime && <span className="text-[9px] text-text-secondary">{g.lastMessageTime}</span>}
+                      </div>
+                      <p className="text-[10px] text-text-secondary truncate">
+                        {g.lastMessageText || g.description || 'General Discussion'}
+                      </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-xs shrink-0">
-                    {unreads[g.id] > 0 && (
+                  <div className="flex items-center gap-xs shrink-0 pl-sm">
+                    {g.unreadCount > 0 && (
                       <span className="h-4 min-w-[16px] px-1 rounded-full bg-primary text-white font-bold text-[9px] flex items-center justify-center animate-pulse">
-                        {unreads[g.id]}
+                        {g.unreadCount}
                       </span>
                     )}
                     {g.isPinned && <Pin className="h-3 w-3 text-text-secondary" />}
@@ -718,35 +894,54 @@ export const TeamManagementPage: React.FC = () => {
           <div className="space-y-sm">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-secondary">Direct Messages</p>
             <div className="space-y-xs">
-              {dmPartners.map(emp => (
-                <div
-                  key={emp.id}
-                  onClick={() => handleDmPartnerClick(emp)}
-                  className={`flex items-center justify-between p-sm rounded-xl cursor-pointer transition-all duration-200 border ${
-                    activeChatId === emp.id && activeTab === 'chat'
-                      ? 'bg-primary-50 dark:bg-primary-950/20 border-primary-200 dark:border-primary-800'
-                      : 'hover:bg-background border-transparent'
-                  }`}
-                >
-                  <div className="flex items-center gap-sm min-w-0">
-                    <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center text-text-primary text-xs font-bold relative shrink-0">
-                      {(emp.firstName?.[0] || '').toUpperCase()}{(emp.lastName?.[0] || '').toUpperCase()}
-                      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border border-card bg-emerald-500" />
+              {dmPartners.map(emp => {
+                const empConv = conversations.find(c => {
+                  if (c.type !== 'direct') return false
+                  return c.members?.some((m: any) => m.user?.email?.toLowerCase() === emp.email?.toLowerCase())
+                })
+                const unreadCount = empConv ? (empConv.unread_count || 0) : 0
+                const lastMsgText = empConv && empConv.last_message ? empConv.last_message.text : ''
+                const lastMsgTime = empConv && empConv.last_message 
+                  ? new Date(empConv.last_message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+                  : ''
+                const isOnline = onlineUsers[emp.email?.toLowerCase()] || false
+                return (
+                  <div
+                    key={emp.id}
+                    onClick={() => handleDmPartnerClick(emp)}
+                    className={`flex items-center justify-between p-sm rounded-xl cursor-pointer transition-all duration-200 border ${
+                      activeChatId === empConv?.id && activeTab === 'chat'
+                        ? 'bg-primary-50 dark:bg-primary-950/20 border-primary-200 dark:border-primary-800'
+                        : 'hover:bg-background border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center gap-sm min-w-0 flex-1">
+                      <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center text-text-primary text-xs font-bold relative shrink-0">
+                        {(emp.firstName?.[0] || '').toUpperCase()}{(emp.lastName?.[0] || '').toUpperCase()}
+                        <span className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border border-card ${
+                          isOnline ? 'bg-emerald-500' : 'bg-slate-400'
+                        }`} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-xs">
+                          <p className="text-sm font-semibold text-text-primary truncate">{emp.firstName} {emp.lastName}</p>
+                          {lastMsgTime && <span className="text-[9px] text-text-secondary">{lastMsgTime}</span>}
+                        </div>
+                        <p className="text-[10px] text-text-secondary truncate">
+                          {lastMsgText || `${emp.position} • ${emp.department}`}
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-text-primary truncate">{emp.firstName} {emp.lastName}</p>
-                      <p className="text-[10px] text-text-secondary truncate">{emp.position} • {emp.department}</p>
+                    <div className="flex items-center gap-xs shrink-0 pl-sm">
+                      {unreadCount > 0 && (
+                        <span className="h-4 min-w-[16px] px-1 rounded-full bg-primary text-white font-bold text-[9px] flex items-center justify-center animate-pulse">
+                          {unreadCount}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-xs shrink-0">
-                    {unreads[emp.id] > 0 && (
-                      <span className="h-4 min-w-[16px] px-1 rounded-full bg-primary text-white font-bold text-[9px] flex items-center justify-center animate-pulse">
-                        {unreads[emp.id]}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         </div>
@@ -972,7 +1167,22 @@ export const TeamManagementPage: React.FC = () => {
                         type="text"
                         placeholder="Type your message here..."
                         value={inputText}
-                        onChange={e => setInputText(e.target.value)}
+                        onChange={e => {
+                          setInputText(e.target.value)
+                          if (activeChatId) {
+                            if (!isTypingRef.current) {
+                              isTypingRef.current = true
+                              socketManager.sendTyping(activeChatId, true)
+                            }
+                            if (typingTimeoutRef.current) {
+                              clearTimeout(typingTimeoutRef.current)
+                            }
+                            typingTimeoutRef.current = setTimeout(() => {
+                              isTypingRef.current = false
+                              socketManager.sendTyping(activeChatId, false)
+                            }, 2000)
+                          }
+                        }}
                         onKeyDown={e => { if (e.key === 'Enter') handleSendMessage() }}
                         className="flex-1 min-w-0 rounded-xl border border-border bg-background px-md py-sm text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                       />
@@ -1002,6 +1212,60 @@ export const TeamManagementPage: React.FC = () => {
                           <div className="aspect-square bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center text-[10px] text-text-secondary font-semibold">Asset 3</div>
                         </div>
                       </div>
+
+                      {activeChatDetails && activeChatDetails.type !== 'direct' && (
+                        <div className="border-t border-border pt-md space-y-sm">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary">Channel Members</h4>
+                          <div className="space-y-xs max-h-40 overflow-y-auto">
+                            {activeChatDetails.members?.map((memberId: string) => {
+                              const emp = employees.find(e => e.id === memberId)
+                              if (!emp) return null
+                              return (
+                                <div key={memberId} className="flex items-center justify-between text-xs p-1">
+                                  <span className="font-semibold text-text-primary">{emp.firstName} {emp.lastName}</span>
+                                  <span className="text-[10px] text-text-secondary">{emp.department}</span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                          
+                          {/* Add Member form for Admin/HR */}
+                          {!isEmployee && (
+                            <div className="flex gap-xs items-center pt-xs">
+                              <select
+                                value={selectedMemberToAdd}
+                                onChange={e => setSelectedMemberToAdd(e.target.value)}
+                                className="flex-1 text-xs rounded-lg border border-border bg-background px-sm py-1 text-text-primary focus:outline-none focus:ring-1 focus:ring-primary focus:border-transparent"
+                              >
+                                <option value="">Add member...</option>
+                                {employees
+                                  .filter(emp => !activeChatDetails.members?.includes(emp.id))
+                                  .map(emp => (
+                                    <option key={emp.id} value={emp.id}>
+                                      {emp.firstName} {emp.lastName}
+                                    </option>
+                                  ))}
+                              </select>
+                              <Button
+                                variant="primary"
+                                className="py-1 px-sm rounded-lg text-xs"
+                                onClick={async () => {
+                                  if (!selectedMemberToAdd || !activeChatId) return
+                                  try {
+                                    await addGroupMember(activeChatId, selectedMemberToAdd)
+                                    loadConversations()
+                                    setSelectedMemberToAdd('')
+                                  } catch (err) {
+                                    console.error('Failed to add member:', err)
+                                  }
+                                }}
+                              >
+                                Add
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       <div className="border-t border-border pt-md">
                         <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary mb-sm">Pinned Messages</h4>
@@ -1417,6 +1681,26 @@ export const TeamManagementPage: React.FC = () => {
                   value={groupForm.description}
                   onChange={e => setGroupForm(prev => ({ ...prev, description: e.target.value }))}
                 />
+                <div className="space-y-xs max-h-32 overflow-y-auto border border-border rounded-xl p-sm bg-background">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary">Select Members</p>
+                  {employees.map(emp => (
+                    <label key={emp.id} className="flex items-center gap-sm text-xs cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 p-1.5 rounded-lg">
+                      <input
+                        type="checkbox"
+                        checked={groupForm.members.includes(emp.id)}
+                        onChange={e => {
+                          if (e.target.checked) {
+                            setGroupForm(prev => ({ ...prev, members: [...prev.members, emp.id] }))
+                          } else {
+                            setGroupForm(prev => ({ ...prev, members: prev.members.filter(id => id !== emp.id) }))
+                          }
+                        }}
+                        className="rounded text-primary border-border focus:ring-primary"
+                      />
+                      <span className="text-text-primary truncate">{emp.firstName} {emp.lastName}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               <div className="flex flex-col-reverse sm:flex-row gap-sm justify-end pt-sm border-t border-border mt-md">
