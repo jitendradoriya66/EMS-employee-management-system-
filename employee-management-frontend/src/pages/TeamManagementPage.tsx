@@ -805,70 +805,40 @@ export const TeamManagementPage: React.FC = () => {
                 })}
               </div>
 
-              {/* Meetings & Birthdays Split */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-lg">
-                
-                {/* Schedule Card */}
-                <div className="lg:col-span-2 card p-sm sm:p-lg space-y-sm sm:space-y-md border border-border bg-card">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-sm">
-                    <div>
-                      <h3 className="text-md font-bold text-text-primary">Today's Meeting Syncs</h3>
-                      <p className="text-xs text-text-secondary">Low latency voice/video standups</p>
-                    </div>
-                    {!isEmployee && (
-                      <Button variant="secondary" onClick={() => setShowScheduleModal(true)} className="w-full sm:w-auto">
-                        <Plus className="h-4 w-4 mr-xs" />
-                        Schedule
-                      </Button>
-                    )}
+              {/* Meetings Sync */}
+              <div className="card p-sm sm:p-lg space-y-sm sm:space-y-md border border-border bg-card">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-sm">
+                  <div>
+                    <h3 className="text-md font-bold text-text-primary">Today's Meeting Syncs</h3>
+                    <p className="text-xs text-text-secondary">Low latency voice/video standups</p>
                   </div>
+                  {!isEmployee && (
+                    <Button variant="secondary" onClick={() => setShowScheduleModal(true)} className="w-full sm:w-auto">
+                      <Plus className="h-4 w-4 mr-xs" />
+                      Schedule
+                    </Button>
+                  )}
+                </div>
 
-                  <div className="space-y-sm">
-                    {meetings.slice(0, 2).map(meet => (
-                      <div key={meet.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-md p-md border border-border rounded-2xl bg-slate-50/50 dark:bg-slate-900/10">
-                        <div className="flex gap-sm items-center min-w-0">
-                          <div className="p-xs bg-primary-100 dark:bg-primary-900/40 text-primary rounded-xl shrink-0">
-                            <Calendar className="h-5 w-5" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-text-primary truncate">{meet.title}</p>
-                            <p className="text-xs text-text-secondary">{meet.time}</p>
-                          </div>
+                <div className="space-y-sm">
+                  {meetings.slice(0, 2).map(meet => (
+                    <div key={meet.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-md p-md border border-border rounded-2xl bg-slate-50/50 dark:bg-slate-900/10">
+                      <div className="flex gap-sm items-center min-w-0">
+                        <div className="p-xs bg-primary-100 dark:bg-primary-900/40 text-primary rounded-xl shrink-0">
+                          <Calendar className="h-5 w-5" />
                         </div>
-                        <Button variant="primary" onClick={() => handleTriggerCall('video', 'Tech Sprint Group')} className="w-full sm:w-auto gap-sm justify-center">
-                          <Video className="h-4 w-4" />
-                          Join Call
-                        </Button>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-text-primary truncate">{meet.title}</p>
+                          <p className="text-xs text-text-secondary">{meet.time}</p>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Team announcements */}
-                <div className="card p-sm sm:p-lg space-y-sm sm:space-y-md border border-border bg-card">
-                  <h3 className="text-md font-bold text-text-primary">Colleague Birthdays</h3>
-                  <div className="space-y-md text-sm text-text-secondary">
-                    <div className="flex gap-sm items-center p-xs border-b border-border">
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-rose-400 to-orange-400 flex items-center justify-center text-white font-bold text-xs shrink-0">
-                        AS
-                      </div>
-                      <div>
-                        <p className="font-semibold text-text-primary">Alice Smith</p>
-                        <p className="text-xs">Engineering • July 28</p>
-                      </div>
+                      <Button variant="primary" onClick={() => handleTriggerCall('video', 'Tech Sprint Group')} className="w-full sm:w-auto gap-sm justify-center">
+                        <Video className="h-4 w-4" />
+                        Join Call
+                      </Button>
                     </div>
-                    <div className="flex gap-sm items-center p-xs border-b border-border">
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-cyan-400 to-indigo-400 flex items-center justify-center text-white font-bold text-xs shrink-0">
-                        BJ
-                      </div>
-                      <div>
-                        <p className="font-semibold text-text-primary">Bob Johnson</p>
-                        <p className="text-xs">HR • August 12</p>
-                      </div>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-
               </div>
             </motion.div>
           )}
@@ -1004,7 +974,7 @@ export const TeamManagementPage: React.FC = () => {
                         value={inputText}
                         onChange={e => setInputText(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') handleSendMessage() }}
-                        className="flex-1 rounded-xl border border-border bg-background px-md py-sm text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                        className="flex-1 min-w-0 rounded-xl border border-border bg-background px-md py-sm text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                       />
                       <Button variant="ghost" onClick={() => handleSendMessage('👍')} className="p-xs text-text-secondary shrink-0">
                         <Smile className="h-4 w-4" />
