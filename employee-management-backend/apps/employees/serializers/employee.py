@@ -122,12 +122,17 @@ class EmployeeCreateSerializer(serializers.ModelSerializer):
             department = None
             if department_name:
                 department, _ = Department.objects.get_or_create(name=department_name)
-            
-            validated_data['user'] = user
-            if department:
-                validated_data['department'] = department
 
-            employee = Employee.objects.create(**validated_data)
+            # Get the employee profile created by the post-save signal, or get_or_create it
+            employee, _ = Employee.objects.get_or_create(user=user)
+            
+            # Update fields
+            for attr, value in validated_data.items():
+                setattr(employee, attr, value)
+            if department:
+                employee.department = department
+                
+            employee.save()
             return employee
 
     def to_representation(self, instance):

@@ -7,8 +7,14 @@ from apps.employees.serializers.employee import (
     EmployeeUpdateSerializer
 )
 
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
+
+class EmployeePagination(PageNumberPagination):
+    page_size = 12
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
 class EmployeeListAPIView(generics.ListAPIView):
     """
@@ -16,6 +22,7 @@ class EmployeeListAPIView(generics.ListAPIView):
     """
     serializer_class = EmployeeListSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = EmployeePagination
     
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     search_fields = ['user__first_name', 'user__last_name', 'department__name', 'position', 'user__employee_id']

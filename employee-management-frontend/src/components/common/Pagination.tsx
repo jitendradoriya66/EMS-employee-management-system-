@@ -60,11 +60,11 @@ export const Pagination: React.FC<PaginationProps> = ({
       </div>
 
       {/* Pagination Controls */}
-      <div className="flex items-center gap-md">
+      <div className="flex flex-wrap items-center justify-center gap-sm sm:gap-md w-full sm:w-auto">
         {/* Rows per page selector */}
         {onItemsPerPageChange && (
-          <div className="flex items-center gap-sm">
-            <label htmlFor="items-per-page" className="text-sm text-text-secondary">
+          <div className="flex items-center gap-sm whitespace-nowrap">
+            <label htmlFor="items-per-page" className="text-sm text-text-secondary whitespace-nowrap">
               Rows per page:
             </label>
             <select

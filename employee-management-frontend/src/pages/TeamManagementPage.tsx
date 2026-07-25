@@ -306,6 +306,7 @@ export const TeamManagementPage: React.FC = () => {
   const [meetingForm, setMeetingForm] = useState({ title: '', time: '11:00 AM', date: new Date().toISOString().slice(0, 10), attendees: [] as string[] })
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const chatFileInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const sessionId = useMemo(() => Math.random().toString(36).substring(2, 9), [])
   const localStreamRef = useRef<MediaStream | null>(null)
@@ -1231,7 +1232,17 @@ export const TeamManagementPage: React.FC = () => {
                         </div>
                       )}
                       <div className="p-md flex gap-sm items-center">
-                        <Button variant="ghost" className="p-xs text-text-secondary shrink-0">
+                        <input
+                          type="file"
+                          ref={chatFileInputRef}
+                          onChange={handleFileUpload}
+                          className="hidden"
+                        />
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => chatFileInputRef.current?.click()} 
+                          className="p-xs text-text-secondary shrink-0"
+                        >
                           <Paperclip className="h-4 w-4" />
                         </Button>
                         <input
@@ -1289,13 +1300,14 @@ export const TeamManagementPage: React.FC = () => {
                         <div className="border-t border-border pt-md space-y-sm">
                           <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary">Channel Members</h4>
                           <div className="space-y-xs max-h-40 overflow-y-auto">
-                            {activeChatDetails.members?.map((memberId: string) => {
-                              const emp = employees.find(e => e.id === memberId)
+                            {activeChatDetails.members?.map((member: any) => {
+                              const email = member.user?.email
+                              const emp = employees.find(e => e.email?.toLowerCase() === email?.toLowerCase())
                               if (!emp) return null
                               return (
-                                <div key={memberId} className="flex items-center justify-between text-xs p-1">
+                                <div key={member.id} className="flex items-center justify-between text-xs p-1">
                                   <span className="font-semibold text-text-primary">{emp.firstName} {emp.lastName}</span>
-                                  <span className="text-[10px] text-text-secondary">{emp.department}</span>
+                                  <span className="text-[10px] text-text-secondary">{emp.department || 'Employee'}</span>
                                 </div>
                               )
                             })}
@@ -1311,7 +1323,7 @@ export const TeamManagementPage: React.FC = () => {
                               >
                                 <option value="">Add member...</option>
                                 {employees
-                                  .filter(emp => !activeChatDetails.members?.includes(emp.id))
+                                  .filter(emp => !activeChatDetails.members?.some((m: any) => m.user?.email?.toLowerCase() === emp.email?.toLowerCase()))
                                   .map(emp => (
                                     <option key={emp.id} value={emp.id}>
                                       {emp.firstName} {emp.lastName}
@@ -1324,9 +1336,14 @@ export const TeamManagementPage: React.FC = () => {
                                 onClick={async () => {
                                   if (!selectedMemberToAdd || !activeChatId) return
                                   try {
-                                    await addGroupMember(activeChatId, selectedMemberToAdd)
-                                    loadConversations()
-                                    setSelectedMemberToAdd('')
+                                    const allUsers = await fetchUsers()
+                                    const emp = employees.find(e => e.id === selectedMemberToAdd)
+                                    const targetUser = allUsers.find((u: any) => u.email?.toLowerCase() === emp?.email?.toLowerCase())
+                                    if (targetUser) {
+                                      await addGroupMember(activeChatId, targetUser.id)
+                                      loadConversations()
+                                      setSelectedMemberToAdd('')
+                                    }
                                   } catch (err) {
                                     console.error('Failed to add member:', err)
                                   }
