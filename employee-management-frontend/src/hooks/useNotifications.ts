@@ -38,6 +38,16 @@ export const useNotifications = () => {
     }
   }
 
+  const markAsRead = async (id: string) => {
+    try {
+      await apiClient.post(`/api/v1/notifications/${id}/mark-read/`)
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
+    } catch (err) {
+      console.error('Failed to mark notification as read', err)
+      throw err
+    }
+  }
+
   // Request browser notification permissions
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -88,5 +98,5 @@ export const useNotifications = () => {
     fetchNotifications()
   }, [fetchNotifications])
 
-  return { notifications, loading, fetchNotifications, markAllAsRead }
+  return { notifications, loading, fetchNotifications, markAllAsRead, markAsRead }
 }

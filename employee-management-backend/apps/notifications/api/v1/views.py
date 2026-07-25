@@ -74,3 +74,13 @@ class MarkAnnouncementsReadAPIView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         Notification.objects.filter(user=request.user, is_read=False, notification_type='announcement').update(is_read=True)
         return Response({"detail": "All announcements marked as read."}, status=status.HTTP_200_OK)
+
+class MarkSingleReadAPIView(generics.GenericAPIView):
+    """
+    API for marking a single notification as read for the authenticated user.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk, *args, **kwargs):
+        Notification.objects.filter(user=request.user, id=pk).update(is_read=True)
+        return Response({"detail": "Notification marked as read."}, status=status.HTTP_200_OK)

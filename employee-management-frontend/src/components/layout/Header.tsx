@@ -42,7 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
   
   const { logout } = useAuth()
   const navigate = useNavigate()
-  const { notifications, markAllAsRead } = useNotifications()
+  const { notifications, markAllAsRead, markAsRead } = useNotifications()
   
   const unreadCount = notifications.filter(n => !n.is_read).length
 
@@ -141,10 +141,29 @@ export const Header: React.FC<HeaderProps> = ({
                         <p className="text-sm font-medium">You're all caught up!</p>
                       </div>
                     ) : (
-                      notifications.slice(0, 10).map((notif) => (
+                       notifications.slice(0, 10).map((notif) => (
                         <div 
                           key={notif.id} 
-                          className={`rounded-2xl border ${notif.is_read ? 'border-transparent bg-background/40' : 'border-primary-500/20 bg-background/80'} p-md shadow-sm backdrop-blur transition-colors`}
+                          onClick={async () => {
+                            if (!notif.is_read) {
+                              await markAsRead(notif.id)
+                            }
+                            setNotificationsOpen(false)
+                            const titleLower = notif.title.toLowerCase()
+                            
+                            if (titleLower.includes('leave')) {
+                              navigate('/leave')
+                            } else if (titleLower.includes('task')) {
+                              navigate('/team')
+                            } else if (titleLower.includes('announcement')) {
+                              navigate('/announcements')
+                            } else if (titleLower.includes('attendance')) {
+                              navigate('/attendance')
+                            } else {
+                              navigate('/team')
+                            }
+                          }}
+                          className={`rounded-2xl border ${notif.is_read ? 'border-transparent bg-background/40' : 'border-primary-500/20 bg-background/80'} p-md shadow-sm backdrop-blur transition-all cursor-pointer hover:bg-slate-200/50 dark:hover:bg-slate-800/50`}
                         >
                           <div className="flex items-start gap-sm">
                             {!notif.is_read && <div className="mt-1.5 h-2 w-2 rounded-full bg-primary-500 flex-shrink-0" />}
