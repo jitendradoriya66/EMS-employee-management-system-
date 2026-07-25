@@ -1098,7 +1098,7 @@ export const TeamManagementPage: React.FC = () => {
                         </div>
                       ) : (
                         (messages[activeChatId] || []).map((msg) => {
-                          const isMyMessage = msg.senderId === currentEmployeeId
+                          const isMyMessage = String(msg.senderId) === String(user?.id)
                           return (
                             <div key={msg.id} className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
                               <div className="group relative max-w-[70%]">
