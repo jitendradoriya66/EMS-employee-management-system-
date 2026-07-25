@@ -68,8 +68,21 @@ class MessageService:
                             "message": message_data
                         }
                     )
+            
+            # Create real-time notification records for other members of the conversation
+            from apps.notifications.services.notification_service import NotificationService
+            other_members = conversation.members.filter(deleted_at__isnull=True).exclude(user=sender)
+            title = f"New message from {sender.first_name} {sender.last_name}" if conversation.type == 'direct' else f"New message in {conversation.title}"
+            message_text = text if text else "[Attachment]"
+            for member in other_members:
+                NotificationService.create_notification(
+                    user=member.user,
+                    title=title,
+                    message=message_text,
+                    notification_type='personal'
+                )
         except Exception as e:
-            print("Failed to broadcast message via WebSocket:", e)
+            print("Failed to broadcast message via WebSocket/Notification:", e)
 
         return message
 

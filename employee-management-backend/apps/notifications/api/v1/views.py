@@ -50,14 +50,10 @@ class BroadcastNotificationAPIView(generics.CreateAPIView):
         if not title or not message:
             return Response({"detail": "Title and message are required."}, status=status.HTTP_400_BAD_REQUEST)
             
-        users = User.objects.all()
-        notifications = [
-            Notification(user=u, title=title, message=message, notification_type='announcement')
-            for u in users
-        ]
-        Notification.objects.bulk_create(notifications)
+        from apps.notifications.services.notification_service import NotificationService
+        NotificationService.broadcast_announcement(title, message)
         
-        return Response({"detail": f"Announcement broadcasted to {len(users)} employees."}, status=status.HTTP_201_CREATED)
+        return Response({"detail": "Announcement broadcasted successfully."}, status=status.HTTP_201_CREATED)
 
 class MarkAllReadAPIView(generics.GenericAPIView):
     """

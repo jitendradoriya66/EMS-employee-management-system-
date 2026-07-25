@@ -52,8 +52,21 @@ class CallService:
                         }
                     }
                 )
-        except Exception:
-            pass
+
+            # Generate incoming call notifications for other members
+            from apps.notifications.services.notification_service import NotificationService
+            other_members = ConversationMember.objects.filter(
+                conversation=conversation,
+                deleted_at__isnull=True
+            ).exclude(user=host)
+            for member in other_members:
+                NotificationService.create_notification(
+                    user=member.user,
+                    title=f"Incoming {call_type.title()} Call",
+                    message=f"{host.first_name} {host.last_name} is calling you."
+                )
+        except Exception as e:
+            print(f"Failed to generate call notifications: {e}")
 
         return call
 
@@ -162,7 +175,8 @@ class CallService:
             return call
 
         with transaction.atomic():
-            if call.status == Call.STATUS_RINGING:
+            was_ringing = call.status == Call.STATUS_RINGING
+            if was_ringing:
                 call.status = Call.STATUS_MISSED
             else:
                 call.status = Call.STATUS_COMPLETED
@@ -181,6 +195,23 @@ class CallService:
             CallParticipant.objects.filter(call=call, left_at__isnull=True).update(
                 left_at=timezone.now()
             )
+
+            # Generate missed call notifications if call was never answered
+            if was_ringing:
+                try:
+                    from apps.notifications.services.notification_service import NotificationService
+                    other_members = ConversationMember.objects.filter(
+                        conversation=call.conversation,
+                        deleted_at__isnull=True
+                    ).exclude(user=call.host)
+                    for member in other_members:
+                        NotificationService.create_notification(
+                            user=member.user,
+                            title="Missed Call",
+                            message=f"You missed a {call.type} call from {call.host.first_name} {call.host.last_name}."
+                        )
+                except Exception as e:
+                    print(f"Failed to generate missed call notification: {e}")
 
         try:
             from asgiref.sync import async_to_sync

@@ -37,6 +37,19 @@ export const SettingsPage: React.FC = () => {
     notifications: {
       email: true,
     },
+    notification_settings: {
+      browser: true,
+      sound: true,
+      chat: true,
+      group: true,
+      voice_calls: true,
+      video_calls: true,
+      announcements: true,
+      tasks: true,
+      leave: true,
+      attendance: true,
+      other: true,
+    }
   })
   
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -49,7 +62,8 @@ export const SettingsPage: React.FC = () => {
         if (data) {
           setFormData(prev => ({
             ...prev,
-            notifications: { email: data.notifications_enabled }
+            notifications: { email: data.notifications_enabled },
+            notification_settings: data.notification_settings || prev.notification_settings
           }))
         }
       } catch (err) {
@@ -94,7 +108,8 @@ export const SettingsPage: React.FC = () => {
         }),
         apiClient.patch('/api/v1/settings/preferences/', {
           theme: themeMode,
-          notifications_enabled: formData.notifications.email
+          notifications_enabled: formData.notifications.email,
+          notification_settings: formData.notification_settings
         })
       ])
       
@@ -242,23 +257,54 @@ export const SettingsPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-md">
+                  <label className="flex items-center gap-md p-md bg-background rounded-lg border border-border cursor-pointer hover:bg-card transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={formData.notifications.email}
+                      onChange={(e) =>
+                        setFormData(prev => ({
+                          ...prev,
+                          notifications: {
+                            ...prev.notifications,
+                            email: e.target.checked,
+                          },
+                        }))
+                      }
+                      className="w-4 h-4 rounded text-primary focus:ring-primary border-border"
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-text-primary">Email Notifications</p>
+                      <p className="text-xs text-text-secondary">Receive updates via email</p>
+                    </div>
+                  </label>
+
                   {[
-                    { key: 'email', label: 'Email Notifications', desc: 'Receive updates via email' },
+                    { key: 'browser', label: 'Browser Notifications', desc: 'Show desktop push notifications' },
+                    { key: 'sound', label: 'Sound Notifications', desc: 'Play sounds on incoming events' },
+                    { key: 'chat', label: 'Direct Chat Alerts', desc: 'Alerts for direct private messages' },
+                    { key: 'group', label: 'Group Chat Alerts', desc: 'Alerts for channel or group discussion messages' },
+                    { key: 'voice_calls', label: 'Voice Calls', desc: 'Incoming voice connection calls' },
+                    { key: 'video_calls', label: 'Video Calls', desc: 'Incoming video connection calls' },
+                    { key: 'announcements', label: 'Announcements', desc: 'System-wide announcements' },
+                    { key: 'tasks', label: 'Task Assignments', desc: 'Updates on task boards and assignments' },
+                    { key: 'leave', label: 'Leave Request Alerts', desc: 'Alerts for leave approvals or new requests' },
+                    { key: 'attendance', label: 'Attendance Alerts', desc: 'Reminders and updates for check-in/out' },
+                    { key: 'other', label: 'Other Alerts', desc: 'General system logs and updates' },
                   ].map(notif => (
                     <label key={notif.key} className="flex items-center gap-md p-md bg-background rounded-lg border border-border cursor-pointer hover:bg-card transition-colors">
                       <input
                         type="checkbox"
-                        checked={formData.notifications[notif.key as keyof typeof formData.notifications]}
+                        checked={formData.notification_settings[notif.key as keyof typeof formData.notification_settings] ?? true}
                         onChange={(e) =>
                           setFormData(prev => ({
                             ...prev,
-                            notifications: {
-                              ...prev.notifications,
+                            notification_settings: {
+                              ...prev.notification_settings,
                               [notif.key]: e.target.checked,
                             },
                           }))
                         }
-                        className="w-4 h-4 rounded"
+                        className="w-4 h-4 rounded text-primary focus:ring-primary border-border"
                       />
                       <div className="flex-1">
                         <p className="text-sm font-semibold text-text-primary">{notif.label}</p>

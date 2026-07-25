@@ -174,6 +174,20 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             "call_data": event["call_data"]
         })
 
+    async def chat_notification(self, event):
+        # Forward new system notification payload in real-time
+        await self.send_json({
+            "type": "notification",
+            "notification": event["notification"]
+        })
+
+    async def chat_conversation_created(self, event):
+        # Forward conversation created event in real-time to trigger list reload
+        await self.send_json({
+            "type": "conversation_created",
+            "conversation": event["conversation"]
+        })
+
     async def chat_call_answered(self, event):
         # Forward call answered event in real-time
         await self.send_json({

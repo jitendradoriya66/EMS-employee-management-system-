@@ -90,6 +90,36 @@ class ConversationService:
                         role=ConversationMember.ROLE_MEMBER
                     )
 
+        # Broadcast conversation creation via WebSocket and generate notification
+        try:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            from apps.communication.serializers.conversation import ConversationListSerializer
+            from apps.notifications.services.notification_service import NotificationService
+            
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                convo_data = ConversationListSerializer(conversation).data
+                convo_data['id'] = str(convo_data['id'])
+                # Broadcast to each added user
+                for member in ConversationMember.objects.filter(conversation=conversation, deleted_at__isnull=True):
+                    async_to_sync(channel_layer.group_send)(
+                        f"user_{member.user.id}",
+                        {
+                            "type": "chat.conversation_created",
+                            "conversation": convo_data
+                        }
+                    )
+                    # Trigger notification for invitees
+                    if member.user != owner:
+                        NotificationService.create_notification(
+                            user=member.user,
+                            title="Added to Group",
+                            message=f"You have been added to the group chat: {title}."
+                        )
+        except Exception as e:
+            print("Failed to broadcast group creation:", e)
+
         return conversation
 
     @staticmethod

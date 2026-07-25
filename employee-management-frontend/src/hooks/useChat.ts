@@ -203,6 +203,11 @@ export function useChat(activeConversationId: string | null) {
       loadConversations() // Update latest message logs on list
     })
 
+    const unsubConvo = socketManager.on('conversation_created', (data) => {
+      console.log('[WebSocket] Conversation created event:', data)
+      loadConversations()
+    })
+
     const unsubTyping = socketManager.on('typing', (data) => {
       if (data.conversation_id === activeConversationId && String(data.user_id) !== String(user?.id)) {
         setTypingUsers((prev) => ({
@@ -262,6 +267,7 @@ export function useChat(activeConversationId: string | null) {
     return () => {
       unsubStatus()
       unsubMsg()
+      unsubConvo()
       unsubTyping()
       unsubReceipt()
       unsubReadAll()

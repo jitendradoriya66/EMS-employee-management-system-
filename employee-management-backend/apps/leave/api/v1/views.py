@@ -99,7 +99,21 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
             if total_days_used + requested_days > 20:
                 raise ValidationError(f"Insufficient leave balance. You have {20 - total_days_used} days remaining.")
 
-            serializer.save(employee=employee)
+            instance = serializer.save(employee=employee)
+            # Notify admins of a new leave request
+            try:
+                from apps.notifications.services.notification_service import NotificationService
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                admins = User.objects.filter(is_staff=True)
+                for admin in admins:
+                    NotificationService.create_notification(
+                        user=admin,
+                        title="New Leave Request",
+                        message=f"New leave request submitted by {self.request.user.first_name} {self.request.user.last_name}."
+                    )
+            except Exception as e:
+                print(f"Failed to generate leave request notification: {e}")
         except Employee.DoesNotExist:
             raise ValidationError("User does not have an associated employee profile.")
 
@@ -108,6 +122,18 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         leave_request = self.get_object()
         leave_request.status = 'approved'
         leave_request.save()
+        
+        # Send notification to the employee
+        try:
+            from apps.notifications.services.notification_service import NotificationService
+            NotificationService.create_notification(
+                user=leave_request.employee.user,
+                title="Leave Request Approved",
+                message=f"Your leave request from {leave_request.start_date} to {leave_request.end_date} has been approved."
+            )
+        except Exception as e:
+            print(f"Failed to generate leave notification: {e}")
+            
         return Response({'status': 'Leave request approved'}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsAdminUser])
@@ -115,4 +141,16 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         leave_request = self.get_object()
         leave_request.status = 'rejected'
         leave_request.save()
+        
+        # Send notification to the employee
+        try:
+            from apps.notifications.services.notification_service import NotificationService
+            NotificationService.create_notification(
+                user=leave_request.employee.user,
+                title="Leave Request Rejected",
+                message=f"Your leave request from {leave_request.start_date} to {leave_request.end_date} has been rejected."
+            )
+        except Exception as e:
+            print(f"Failed to generate leave notification: {e}")
+            
         return Response({'status': 'Leave request rejected'}, status=status.HTTP_200_OK)
