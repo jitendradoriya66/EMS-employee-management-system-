@@ -65,7 +65,7 @@ export interface FileItem {
 }
 
 export const TeamManagementPage: React.FC = () => {
-  const { user } = useAuth()
+  const { user, fetchUsers } = useAuth()
   const role = user?.role ?? 'employee'
   const isEmployee = role === 'employee'
 
@@ -657,11 +657,21 @@ export const TeamManagementPage: React.FC = () => {
   const handleCreateGroup = async () => {
     if (!groupForm.name.trim()) return
     try {
+      const allUsers = await fetchUsers()
+      const selectedEmails = groupForm.members.map(empId => {
+        const emp = employees.find(e => e.id === empId)
+        return emp?.email?.toLowerCase()
+      }).filter(Boolean)
+
+      const userIds = allUsers.filter((u: any) => 
+        selectedEmails.includes(u.email?.toLowerCase())
+      ).map((u: any) => u.id)
+
       await createConversation({
         type: 'group',
         title: groupForm.name,
         description: groupForm.description,
-        member_ids: groupForm.members
+        member_ids: userIds
       })
       loadConversations()
       setShowCreateModal(false)
@@ -711,7 +721,6 @@ export const TeamManagementPage: React.FC = () => {
     }
   }
 
-  const { fetchUsers } = useAuth()
   const handleDmPartnerClick = async (partnerEmployee: any) => {
     const partnerEmail = partnerEmployee.email
     const existingConv = Array.isArray(conversations) ? conversations.find(c => {
