@@ -10,10 +10,19 @@ class ChatSocketManager {
 
   constructor() {
     const isSecure = window.location.protocol === 'https:';
-    const defaultHost = isSecure ? 'wss://localhost:8000' : 'ws://localhost:8000';
-    let host = import.meta.env.VITE_API_URL || defaultHost;
-    // Safely convert http/https to ws/wss without duplicating 's'
-    host = host.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:');
+    let host = import.meta.env.VITE_API_URL || '';
+    
+    if (host) {
+      host = host.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:');
+    } else {
+      // Fallback: If on localhost, use local backend port, otherwise use production host
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        host = isSecure ? 'wss://localhost:8000' : 'ws://localhost:8000';
+      } else {
+        host = isSecure ? `wss://${window.location.host}` : `ws://${window.location.host}`;
+      }
+    }
+    
     this.url = `${host}/ws/communication/chat/`;
   }
 
