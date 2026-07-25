@@ -14,8 +14,6 @@ import {
   UserCog,
   Power,
   Trash2,
-  ChevronLeft,
-  ChevronRight,
   Building2,
   CalendarDays,
   Activity,
@@ -29,6 +27,7 @@ import { Alert } from '@/components/common/Alert'
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
 import { Select } from '@/components/common/Select'
+import { ModernPagination } from '@/components/common/ModernPagination'
 import { useAuth } from '@/contexts/AuthContext'
 import type { UserAccount, UserRole } from '@/types'
 
@@ -471,24 +470,15 @@ export const UserManagementPage: React.FC = () => {
               </table>
             </div>
 
-            <div className="flex flex-col gap-md border-t border-border px-lg py-md sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-text-secondary">
-                Showing <span className="font-semibold text-text-primary">{visibleUsers.length}</span> of <span className="font-semibold text-text-primary">{filteredUsers.length}</span> users
-              </p>
-              <div className="flex items-center gap-sm">
-                <Button variant="secondary" size="sm" disabled={currentPage === 1} onClick={() => setPage(previous => Math.max(1, previous - 1))} className="gap-xs">
-                  <ChevronLeft className="h-4 w-4" />
-                  Prev
-                </Button>
-                <span className="rounded-full border border-border bg-background px-md py-xs text-sm font-semibold text-text-secondary">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <Button variant="secondary" size="sm" disabled={currentPage === totalPages} onClick={() => setPage(previous => Math.min(totalPages, previous + 1))} className="gap-xs">
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+            {totalPages > 1 && (
+              <div className="px-lg py-md border-t border-border">
+                <ModernPagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setPage}
+                />
               </div>
-            </div>
+            )}
           </div>
         </div>
 
