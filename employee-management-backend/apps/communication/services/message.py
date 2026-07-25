@@ -51,6 +51,7 @@ class MessageService:
             channel_layer = get_channel_layer()
             if channel_layer:
                 message_data = MessageReadSerializer(message).data
+                # Broadcast to conversation group
                 async_to_sync(channel_layer.group_send)(
                     f"conversation_{conversation.id}",
                     {
@@ -58,8 +59,17 @@ class MessageService:
                         "message": message_data
                     }
                 )
-        except Exception:
-            pass
+                # Broadcast to each member's personal user group so new conversations work instantly
+                for member in conversation.members.all():
+                    async_to_sync(channel_layer.group_send)(
+                        f"user_{member.user.id}",
+                        {
+                            "type": "chat.message",
+                            "message": message_data
+                        }
+                    )
+        except Exception as e:
+            print("Failed to broadcast message via WebSocket:", e)
 
         return message
 
