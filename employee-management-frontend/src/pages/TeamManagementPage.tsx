@@ -781,12 +781,24 @@ export const TeamManagementPage: React.FC = () => {
   const paginatedFiles = files.slice((filePage - 1) * filesPerPage, filePage * filesPerPage)
   const totalFilePages = Math.ceil(files.length / filesPerPage)
 
+  useEffect(() => {
+    const isMobileChatOpen = activeTab === 'chat' && activeChatId && window.innerWidth < 1024
+    if (isMobileChatOpen) {
+      document.body.classList.add('mobile-chat-active')
+    } else {
+      document.body.classList.remove('mobile-chat-active')
+    }
+    return () => {
+      document.body.classList.remove('mobile-chat-active')
+    }
+  }, [activeTab, activeChatId])
+
   return (
     <div className={`flex flex-col lg:flex-row h-[100dvh] lg:h-[calc(100vh-140px)] gap-md relative overflow-hidden bg-background text-text-primary ${
       activeTab === 'chat' && activeChatId ? 'fixed inset-0 z-50 m-0 pb-0 rounded-none' : 'pb-16 lg:pb-0'
     }`}>
       {/* Persistent Left Sidebar */}
-      <div className={`w-full lg:w-80 h-full lg:h-auto flex flex-col lg:rounded-3xl border border-border bg-card p-md shadow-sm no-print ${
+      <div className={`w-full lg:w-80 h-[calc(100dvh-4rem)] lg:h-auto flex flex-col lg:rounded-3xl border border-border bg-card p-md shadow-sm no-print ${
         activeTab === 'chat' && activeChatId ? 'hidden lg:flex' : 'flex'
       }`}>
         {/* Workspace Title & Search */}
@@ -1785,7 +1797,7 @@ export const TeamManagementPage: React.FC = () => {
       </AnimatePresence>
 
       {/* Mobile Bottom Navigation Bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-card border-t border-border flex items-center justify-around px-md z-40 shadow-lg no-print">
+      <div id="mobile-bottom-nav" className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-card border-t border-border flex items-center justify-around px-md z-40 shadow-lg no-print">
         {[
           { id: 'dashboard', label: 'Home', icon: Sparkles },
           { id: 'chat', label: 'Chat', icon: MessageSquare },

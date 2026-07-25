@@ -257,3 +257,18 @@
 }
 
 .no-scrollbar::-webkit-scrollbar { display: none !important; } .no-scrollbar { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+
+/* Mobile Chat Fullscreen Overrides */
+body.mobile-chat-active header,
+body.mobile-chat-active #mobile-bottom-nav {
+  display: none !important;
+}
+
+body.mobile-chat-active main,
+body.mobile-chat-active main > div {
+  padding: 0 !important;
+  margin: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  height: 100% !important;
+}
