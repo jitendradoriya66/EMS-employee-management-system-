@@ -753,7 +753,7 @@ export const TeamManagementPage: React.FC = () => {
       </div>
 
       {/* Main Workspace Frame */}
-      <div className={`flex-1 flex-col rounded-3xl bg-slate-50/40 dark:bg-slate-900/10 overflow-hidden relative border border-border/50 ${
+      <div className={`flex-1 flex flex-col rounded-none lg:rounded-3xl bg-slate-50/40 dark:bg-slate-900/10 overflow-hidden relative border-0 lg:border lg:border-border/50 ${
         activeTab === 'chat' && activeChatId === null ? 'hidden lg:flex' : 'flex'
       }`}>
         
