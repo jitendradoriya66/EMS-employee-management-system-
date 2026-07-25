@@ -262,6 +262,9 @@ export const TeamManagementPage: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const localStreamRef = useRef<MediaStream | null>(null)
   const localVideoRef = useRef<HTMLVideoElement | null>(null)
+  const peerConnectionRef = useRef<RTCPeerConnection | null>(null)
+  const remoteVideoRef = useRef<HTMLVideoElement | null>(null)
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
     if (activeCall && activeCall.status === 'connected') {
@@ -274,6 +277,57 @@ export const TeamManagementPage: React.FC = () => {
           localVideoRef.current.srcObject = stream
           localVideoRef.current.play().catch(err => console.error("Video play error:", err))
         }
+
+        // Initialize RTCPeerConnection
+        const pc = new RTCPeerConnection({
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' }
+          ]
+        })
+        peerConnectionRef.current = pc
+
+        // Stream local tracks
+        stream.getTracks().forEach(track => {
+          pc.addTrack(track, stream)
+        })
+
+        // Handle remote stream tracks
+        pc.ontrack = (event) => {
+          const remoteStream = event.streams[0]
+          if (activeCall.type === 'video' && remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = remoteStream
+            remoteVideoRef.current.play().catch(err => console.error("Remote video play error:", err))
+          } else if (activeCall.type === 'voice' && remoteAudioRef.current) {
+            remoteAudioRef.current.srcObject = remoteStream
+            remoteAudioRef.current.play().catch(err => console.error("Remote audio play error:", err))
+          }
+        }
+
+        // Broadcast ICE candidates
+        pc.onicecandidate = (event) => {
+          if (event.candidate) {
+            socketManager.send({
+              type: 'rtc_signal',
+              conversation_id: activeChatId,
+              signal_data: { candidate: event.candidate }
+            })
+          }
+        }
+
+        // If the initiator, create the offer SDP payload
+        if (activeCall.isIncoming === false) {
+          pc.createOffer().then(offer => {
+            return pc.setLocalDescription(offer)
+          }).then(() => {
+            socketManager.send({
+              type: 'rtc_signal',
+              conversation_id: activeChatId,
+              signal_data: { sdp: pc.localDescription }
+            })
+          }).catch(err => console.error("Create offer error:", err))
+        }
       }).catch(err => {
         console.error("Failed to access media devices:", err)
       })
@@ -282,8 +336,44 @@ export const TeamManagementPage: React.FC = () => {
         localStreamRef.current.getTracks().forEach(track => track.stop())
         localStreamRef.current = null
       }
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close()
+        peerConnectionRef.current = null
+      }
     }
-  }, [activeCall?.status, activeCall?.type])
+  }, [activeCall?.status, activeCall?.type, activeChatId])
+
+  // Listen to remote signaling offers/answers and ICE candidates
+  useEffect(() => {
+    const unsubRtc = socketManager.on('rtc_signal', async (data: any) => {
+      if (String(data.sender_id) === String(user?.id)) return
+      const pc = peerConnectionRef.current
+      if (!pc) return
+
+      const { sdp, candidate } = data.signal_data || {}
+      if (sdp) {
+        await pc.setRemoteDescription(new RTCSessionDescription(sdp))
+        if (sdp.type === 'offer') {
+          const answer = await pc.createAnswer()
+          await pc.setLocalDescription(answer)
+          socketManager.send({
+            type: 'rtc_signal',
+            conversation_id: activeChatId,
+            signal_data: { sdp: pc.localDescription }
+          })
+        }
+      } else if (candidate) {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate))
+        } catch (e) {
+          console.error("Error adding ice candidate:", e)
+        }
+      }
+    })
+    return () => {
+      unsubRtc()
+    }
+  }, [activeChatId, user?.id])
   
   // Call timer simulation
   useEffect(() => {
@@ -1116,13 +1206,22 @@ export const TeamManagementPage: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-xs sm:gap-md w-full h-full overflow-y-auto md:overflow-hidden p-xs">
                     {/* Remote Stream Video */}
                     <div className="relative rounded-xl sm:rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center min-h-[160px] md:min-h-0">
-                      <div className="text-center space-y-md">
-                        <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center text-3xl sm:text-4xl font-bold mx-auto">
-                          {activeCall.partnerName?.[0]}
+                      {activeCall.status === 'connected' ? (
+                        <video 
+                          ref={remoteVideoRef} 
+                          playsInline 
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="text-center space-y-md">
+                          <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center text-3xl sm:text-4xl font-bold mx-auto animate-pulse">
+                            {activeCall.partnerName?.[0]}
+                          </div>
+                          <p className="text-sm font-semibold">{activeCall.partnerName}</p>
+                          <p className="text-xs text-slate-400">Ringing...</p>
                         </div>
-                        <p className="text-sm font-semibold">{activeCall.partnerName}</p>
-                      </div>
-                      <div className="absolute bottom-md left-md bg-slate-950/80 px-md py-xs rounded-lg text-xs">
+                      )}
+                      <div className="absolute bottom-md left-md bg-slate-950/80 px-md py-xs rounded-lg text-xs z-10">
                         Remote Peer Feed
                       </div>
                     </div>
@@ -1155,6 +1254,7 @@ export const TeamManagementPage: React.FC = () => {
                     </div>
                     <h3 className="text-xl sm:text-2xl font-black">{activeCall.partnerName}</h3>
                     <p className="text-[10px] sm:text-xs text-slate-500">Voice Link Connection Established</p>
+                    <audio ref={remoteAudioRef} autoPlay className="hidden" />
                   </div>
                 )}
 

@@ -146,6 +146,15 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             "call_data": event["call_data"]
         })
 
+    async def chat_rtc_signal(self, event):
+        # Forward WebRTC signaling payload in real-time
+        await self.send_json({
+            "type": "rtc_signal",
+            "conversation_id": event["conversation_id"],
+            "sender_id": event["sender_id"],
+            "signal_data": event["signal_data"]
+        })
+
     # DB Operations (async wrappers)
     @database_sync_to_async
     def get_user_from_token(self, token):
