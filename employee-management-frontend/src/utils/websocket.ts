@@ -10,29 +10,36 @@ class ChatSocketManager {
 
   constructor() {
     let wsUrl = import.meta.env.VITE_WS_URL || '';
-    if (wsUrl) {
-      if (!wsUrl.startsWith('ws://') && !wsUrl.startsWith('wss://')) {
-        const isSecure = window.location.protocol === 'https:';
-        wsUrl = (isSecure ? 'wss://' : 'ws://') + wsUrl;
+    let apiUrl = import.meta.env.VITE_API_URL || '';
+    let host = '';
+    
+    if (wsUrl && wsUrl.length > 5 && (wsUrl.includes('.') || wsUrl.includes('/') || wsUrl.includes(':'))) {
+      if (wsUrl.startsWith('ws://') || wsUrl.startsWith('wss://')) {
+        this.url = wsUrl.endsWith('/') ? wsUrl : `${wsUrl}/`;
+        return;
       }
-      this.url = wsUrl.endsWith('/') ? wsUrl : `${wsUrl}/`;
+      host = wsUrl;
+    } else if (apiUrl && apiUrl.length > 5) {
+      host = apiUrl;
+    }
+    
+    if (host) {
+      host = host.replace(/^https:/i, 'wss:').replace(/^http:/i, 'ws:');
+      if (!host.startsWith('ws://') && !host.startsWith('wss://')) {
+        const isSecure = window.location.protocol === 'https:';
+        host = (isSecure ? 'wss://' : 'ws://') + host;
+      }
+      this.url = host.endsWith('/') ? `${host}ws/communication/chat/` : `${host}/ws/communication/chat/`;
     } else {
       const isSecure = window.location.protocol === 'https:';
-      let host = import.meta.env.VITE_API_URL || '';
-      
-      if (host) {
-        host = host.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:');
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        this.url = isSecure ? 'wss://localhost:8000/ws/communication/chat/' : 'ws://localhost:8000/ws/communication/chat/';
       } else {
-        // Fallback: If on localhost, use local backend port, otherwise use production host
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-          host = isSecure ? 'wss://localhost:8000' : 'ws://localhost:8000';
-        } else {
-          host = isSecure ? `wss://${window.location.host}` : `ws://${window.location.host}`;
-        }
+        this.url = isSecure ? `wss://${window.location.host}/ws/communication/chat/` : `ws://${window.location.host}/ws/communication/chat/`;
       }
-      
-      this.url = `${host}/ws/communication/chat/`;
     }
+    
+    this.url = this.url.replace(/([^:]\/)\/+/g, "$1");
   }
 
   public connect(): void {
