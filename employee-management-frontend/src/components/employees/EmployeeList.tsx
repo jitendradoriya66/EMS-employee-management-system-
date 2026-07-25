@@ -94,7 +94,7 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && onPageChange && (
+      {totalItems > 0 && onPageChange && (
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
