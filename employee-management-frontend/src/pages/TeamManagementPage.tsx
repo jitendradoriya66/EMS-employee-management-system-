@@ -799,7 +799,7 @@ export const TeamManagementPage: React.FC = () => {
     }`}>
       {/* Persistent Left Sidebar */}
       <div className={`w-full lg:w-80 h-[calc(100dvh-6rem)] mb-4 lg:h-auto lg:mb-0 flex flex-col rounded-2xl lg:rounded-3xl border border-border bg-card p-md shadow-sm no-print ${
-        activeTab === 'chat' && activeChatId ? 'hidden lg:flex' : 'flex'
+        activeTab === 'chat' && !activeChatId ? 'flex' : 'hidden lg:flex'
       }`}>
         {/* Workspace Title & Search */}
         <div className="flex items-center justify-between gap-sm mb-md px-sm">
