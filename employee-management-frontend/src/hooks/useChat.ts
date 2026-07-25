@@ -45,7 +45,8 @@ export function useChat(activeConversationId: string | null) {
     try {
       setLoading(true)
       const data = await fetchMessages({ conversation: conversationId })
-      setMessages(data)
+      const sortedData = [...data].sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime())
+      setMessages(sortedData)
     } catch (e) {
       console.error('Failed to load messages', e)
     } finally {
@@ -184,8 +185,18 @@ export function useChat(activeConversationId: string | null) {
 
       if (data.message && msgConvoId === currentConvoId) {
         setMessages((prev) => {
-          // Prevent duplicates if already added optimistically
           if (prev.some((m) => m.id === data.message.id)) return prev
+          
+          // Replace matching pending optimistic message inline to prevent duplicates
+          const pendingIdx = prev.findIndex((m) => 
+            m.is_pending && 
+            m.text === data.message.text && 
+            String(m.sender?.id) === String(data.message.sender?.id)
+          )
+          if (pendingIdx > -1) {
+            return prev.map((m, idx) => idx === pendingIdx ? data.message : m)
+          }
+          
           return [...prev, data.message]
         })
       }

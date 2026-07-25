@@ -82,6 +82,7 @@ export const TeamManagementPage: React.FC = () => {
   
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
   const [inputText, setInputText] = useState('')
+  const [replyingTo, setReplyingTo] = useState<any>(null)
 
   const {
     conversations,
@@ -643,8 +644,9 @@ export const TeamManagementPage: React.FC = () => {
   const handleSendMessage = (textOverride?: string) => {
     const textToSend = textOverride || inputText
     if (!textToSend.trim() || !activeChatId) return
-    sendChatMessage(textToSend)
+    sendChatMessage(textToSend, undefined, undefined, replyingTo?.id)
     setInputText('')
+    setReplyingTo(null)
     playSound('outgoing')
   }
 
@@ -780,10 +782,12 @@ export const TeamManagementPage: React.FC = () => {
   const totalFilePages = Math.ceil(files.length / filesPerPage)
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)] lg:h-[calc(100vh-140px)] gap-md relative overflow-hidden bg-background text-text-primary pb-16 lg:pb-0">
+    <div className={`flex flex-col lg:flex-row h-[100dvh] lg:h-[calc(100vh-140px)] gap-md relative overflow-hidden bg-background text-text-primary ${
+      activeTab === 'chat' && activeChatId ? 'fixed inset-0 z-50 m-0 pb-0 rounded-none' : 'pb-16 lg:pb-0'
+    }`}>
       {/* Persistent Left Sidebar */}
-      <div className={`w-full lg:w-80 h-full lg:h-auto flex flex-col rounded-3xl border border-border bg-card p-md shadow-sm no-print ${
-        activeTab === 'chat' && activeChatId === null ? 'flex' : 'hidden lg:flex'
+      <div className={`w-full lg:w-80 h-full lg:h-auto flex flex-col lg:rounded-3xl border border-border bg-card p-md shadow-sm no-print ${
+        activeTab === 'chat' && activeChatId ? 'hidden lg:flex' : 'flex'
       }`}>
         {/* Workspace Title & Search */}
         <div className="flex items-center justify-between gap-sm mb-md px-sm">
@@ -1101,7 +1105,7 @@ export const TeamManagementPage: React.FC = () => {
                           const isMyMessage = String(msg.senderId) === String(user?.id)
                           return (
                             <div key={msg.id} className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
-                              <div className="group relative max-w-[70%]">
+                              <div className="group relative max-w-[85%] md:max-w-[75%]">
                                 {/* Reactions drawer */}
                                 <div className="absolute -top-3 right-0 opacity-0 group-hover:opacity-100 transition-opacity bg-card shadow-lg rounded-full border border-border px-xs py-0.5 flex gap-1 z-10">
                                   {['👍', '🔥', '🎉', '❤️'].map(emoji => (
@@ -1113,6 +1117,9 @@ export const TeamManagementPage: React.FC = () => {
                                       {emoji}
                                     </button>
                                   ))}
+                                  <button onClick={() => setReplyingTo(msg)} className="hover:scale-125 transition-transform ml-1 text-text-secondary hover:text-primary">
+                                    <MessageSquare className="h-3 w-3" />
+                                  </button>
                                 </div>
                                 <div className={`p-md rounded-2xl border ${
                                   isMyMessage 
@@ -1159,11 +1166,26 @@ export const TeamManagementPage: React.FC = () => {
                     </div>
 
                     {/* Chat composer */}
-                    <div className="flex-shrink-0 border-t border-border bg-card p-md flex gap-sm items-center no-print">
-                      <Button variant="ghost" className="p-xs text-text-secondary shrink-0">
-                        <Paperclip className="h-4 w-4" />
-                      </Button>
-                      <input
+                    <div className="flex-shrink-0 border-t border-border bg-card flex flex-col no-print">
+                      {replyingTo && (
+                        <div className="px-md py-sm bg-background border-b border-border flex items-center justify-between">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-1 h-full bg-primary rounded-full"></div>
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-bold text-primary truncate">Replying to {replyingTo.senderName}</p>
+                              <p className="text-xs text-text-secondary truncate">{replyingTo.text}</p>
+                            </div>
+                          </div>
+                          <button onClick={() => setReplyingTo(null)} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full">
+                            <X className="h-4 w-4 text-text-secondary" />
+                          </button>
+                        </div>
+                      )}
+                      <div className="p-md flex gap-sm items-center">
+                        <Button variant="ghost" className="p-xs text-text-secondary shrink-0">
+                          <Paperclip className="h-4 w-4" />
+                        </Button>
+                        <input
                         type="text"
                         placeholder="Type your message here..."
                         value={inputText}
@@ -1192,6 +1214,7 @@ export const TeamManagementPage: React.FC = () => {
                       <Button variant="primary" className="p-sm rounded-xl shrink-0" onClick={() => handleSendMessage()}>
                         <Send className="h-4 w-4" />
                       </Button>
+                      </div>
                     </div>
                   </div>
 
