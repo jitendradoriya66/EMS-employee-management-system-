@@ -260,11 +260,13 @@ export const TeamManagementPage: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
+  const sessionId = useMemo(() => Math.random().toString(36).substring(2, 9), [])
   const localStreamRef = useRef<MediaStream | null>(null)
   const localVideoRef = useRef<HTMLVideoElement | null>(null)
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null)
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null)
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null)
+  const remoteStreamRef = useRef<MediaStream | null>(null)
 
   useEffect(() => {
     if (activeCall && activeCall.status === 'connected') {
@@ -296,6 +298,7 @@ export const TeamManagementPage: React.FC = () => {
         // Handle remote stream tracks
         pc.ontrack = (event) => {
           const remoteStream = event.streams[0]
+          remoteStreamRef.current = remoteStream
           if (activeCall.type === 'video' && remoteVideoRef.current) {
             remoteVideoRef.current.srcObject = remoteStream
             remoteVideoRef.current.play().catch(err => console.error("Remote video play error:", err))
@@ -311,7 +314,7 @@ export const TeamManagementPage: React.FC = () => {
             socketManager.send({
               type: 'rtc_signal',
               conversation_id: activeChatId,
-              signal_data: { candidate: event.candidate }
+              signal_data: { candidate: event.candidate, sessionId }
             })
           }
         }
@@ -324,7 +327,7 @@ export const TeamManagementPage: React.FC = () => {
             socketManager.send({
               type: 'rtc_signal',
               conversation_id: activeChatId,
-              signal_data: { sdp: pc.localDescription }
+              signal_data: { sdp: pc.localDescription, sessionId }
             })
           }).catch(err => console.error("Create offer error:", err))
         }
@@ -340,13 +343,14 @@ export const TeamManagementPage: React.FC = () => {
         peerConnectionRef.current.close()
         peerConnectionRef.current = null
       }
+      remoteStreamRef.current = null
     }
   }, [activeCall?.status, activeCall?.type, activeChatId])
 
   // Listen to remote signaling offers/answers and ICE candidates
   useEffect(() => {
     const unsubRtc = socketManager.on('rtc_signal', async (data: any) => {
-      if (String(data.sender_id) === String(user?.id)) return
+      if (data.signal_data?.sessionId === sessionId) return
       const pc = peerConnectionRef.current
       if (!pc) return
 
@@ -359,8 +363,11 @@ export const TeamManagementPage: React.FC = () => {
           socketManager.send({
             type: 'rtc_signal',
             conversation_id: activeChatId,
-            signal_data: { sdp: pc.localDescription }
+            signal_data: { sdp: pc.localDescription, sessionId }
           })
+        } else if (sdp.type === 'answer') {
+          setActiveCall(prev => prev ? { ...prev, status: 'connected' } : null)
+          playSound('outgoing')
         }
       } else if (candidate) {
         try {
@@ -373,7 +380,7 @@ export const TeamManagementPage: React.FC = () => {
     return () => {
       unsubRtc()
     }
-  }, [activeChatId, user?.id])
+  }, [activeChatId, sessionId])
   
   // Call timer simulation
   useEffect(() => {
@@ -591,12 +598,7 @@ export const TeamManagementPage: React.FC = () => {
     } catch (err) {
       console.error('Failed to register call on backend:', err)
     }
-    
-    // Simulate connection after 2 seconds
-    setTimeout(() => {
-      setActiveCall(prev => prev ? { ...prev, status: 'connected' } : null)
-    }, 2000)
-  }
+    }
 
   const meetingsPerPage = 4
   const paginatedMeetings = meetings.slice((meetingPage - 1) * meetingsPerPage, meetingPage * meetingsPerPage)
@@ -1206,7 +1208,13 @@ export const TeamManagementPage: React.FC = () => {
                     <div className="relative rounded-xl sm:rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center min-h-[160px] md:min-h-0">
                       {activeCall.status === 'connected' ? (
                         <video 
-                          ref={remoteVideoRef} 
+                          ref={(el) => {
+                            remoteVideoRef.current = el;
+                            if (el && remoteStreamRef.current) {
+                              el.srcObject = remoteStreamRef.current;
+                              el.play().catch(() => {});
+                            }
+                          }}
                           autoPlay
                           playsInline 
                           className="absolute inset-0 w-full h-full object-cover"
@@ -1233,9 +1241,16 @@ export const TeamManagementPage: React.FC = () => {
                         </div>
                       ) : (
                         <video 
-                          ref={localVideoRef} 
+                          ref={(el) => {
+                            localVideoRef.current = el;
+                            if (el && localStreamRef.current) {
+                              el.srcObject = localStreamRef.current;
+                              el.play().catch(() => {});
+                            }
+                          }}
                           muted 
                           playsInline 
+                          autoPlay
                           className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
                         />
                       )}
@@ -1253,7 +1268,17 @@ export const TeamManagementPage: React.FC = () => {
                     </div>
                     <h3 className="text-xl sm:text-2xl font-black">{activeCall.partnerName}</h3>
                     <p className="text-[10px] sm:text-xs text-slate-500">Voice Link Connection Established</p>
-                    <audio ref={remoteAudioRef} autoPlay className="absolute opacity-0 pointer-events-none w-px h-px" />
+                    <audio 
+                      ref={(el) => {
+                        remoteAudioRef.current = el;
+                        if (el && remoteStreamRef.current) {
+                          el.srcObject = remoteStreamRef.current;
+                          el.play().catch(() => {});
+                        }
+                      }} 
+                      autoPlay 
+                      className="absolute opacity-0 pointer-events-none w-px h-px" 
+                    />
                   </div>
                 )}
 
