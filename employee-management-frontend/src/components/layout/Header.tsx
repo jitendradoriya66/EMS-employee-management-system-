@@ -74,7 +74,7 @@ export const Header: React.FC<HeaderProps> = ({
         onCancel={() => setLogoutConfirmOpen(false)}
       />
 
-      <header className="bg-card border-b border-border shadow-sm sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-card/90 no-print">
+      <header className="bg-card border-b border-border shadow-sm sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-card/90 no-print">
         <div className="h-16 px-md md:px-lg flex items-center justify-between">
           {/* Left side */}
           <div className="flex items-center gap-md">

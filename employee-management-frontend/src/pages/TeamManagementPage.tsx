@@ -5,7 +5,7 @@ import {
   Phone, Video, Calendar, FolderOpen, 
   Pin, Bell, Sparkles, Smile, 
   Paperclip, Mic, VideoOff, MicOff, PhoneOff, Hand,
-  Eye, Download, Info, ArrowLeft, Search, Upload
+  Eye, Download, Info, ArrowLeft, Search, Upload, FileText
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useEmployees } from '@/hooks/useEmployees'
@@ -126,9 +126,11 @@ export const TeamManagementPage: React.FC = () => {
       senderId: m.sender?.id || 'temp',
       senderName: m.sender?.name || 'User',
       senderRole: m.sender?.role || 'employee',
-      text: m.text || (m.file_path ? `[File: ${m.file_type}]` : ''),
+      text: m.text || (m.file_path ? `Sent an attachment: ${m.file_path.split('/').pop()}` : ''),
       timestamp: m.created_at,
-      reactions: (m.reactions?.map((r: any) => r.emoji) || []) as string[]
+      reactions: (m.reactions?.map((r: any) => r.emoji) || []) as string[],
+      filePath: m.file_path,
+      fileType: m.file_type
     }))
   }, [chatMessages])
 
@@ -322,6 +324,14 @@ export const TeamManagementPage: React.FC = () => {
   const activeCallRef = useRef<any>(null)
   const typingTimeoutRef = useRef<any>(null)
   const isTypingRef = useRef(false)
+
+  const getFileDownloadUrl = (filePath: string) => {
+    if (!filePath) return ''
+    if (filePath.startsWith('http://') || filePath.startsWith('https://')) return filePath
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    const cleanPath = filePath.startsWith('/') ? filePath : `/${filePath}`
+    return `${baseUrl}${cleanPath}`
+  }
 
   useEffect(() => {
     activeCallRef.current = activeCall
@@ -913,7 +923,7 @@ export const TeamManagementPage: React.FC = () => {
                   }}
                   className={`flex items-center justify-between p-sm rounded-xl cursor-pointer transition-all duration-200 group border ${
                     activeChatId === g.id && activeTab === 'chat'
-                      ? 'bg-primary-50 dark:bg-primary-950/20 border-primary-200 dark:border-primary-800'
+                      ? 'bg-primary/20 border-primary/30'
                       : 'hover:bg-background border-transparent'
                   }`}
                 >
@@ -965,7 +975,7 @@ export const TeamManagementPage: React.FC = () => {
                     onClick={() => handleDmPartnerClick(emp)}
                     className={`flex items-center justify-between p-sm rounded-xl cursor-pointer transition-all duration-200 border ${
                       activeChatId === empConv?.id && activeTab === 'chat'
-                        ? 'bg-primary-50 dark:bg-primary-950/20 border-primary-200 dark:border-primary-800'
+                        ? 'bg-primary/20 border-primary/30'
                         : 'hover:bg-background border-transparent'
                     }`}
                   >
@@ -1181,7 +1191,36 @@ export const TeamManagementPage: React.FC = () => {
                                       {msg.senderName} ({msg.senderRole.replace('_', ' ')})
                                     </div>
                                   )}
-                                  <p className="text-sm break-words leading-relaxed">{msg.text}</p>
+                                  {msg.filePath ? (
+                                    <div className="mt-sm p-sm rounded-xl bg-black/10 dark:bg-white/5 border border-black/10 dark:border-white/10 flex items-center justify-between gap-md min-w-[200px] max-w-full">
+                                      <div className="flex items-center gap-sm min-w-0">
+                                        <div className={`p-xs rounded-lg shrink-0 ${isMyMessage ? 'bg-white/15 text-white' : 'bg-primary/10 text-primary'}`}>
+                                          <FileText className="h-5 w-5" />
+                                        </div>
+                                        <div className="min-w-0">
+                                          <p className={`text-xs font-bold truncate ${isMyMessage ? 'text-white' : 'text-text-primary'}`}>
+                                            {msg.text.replace('Sent an attachment: ', '')}
+                                          </p>
+                                          <p className={`text-[10px] ${isMyMessage ? 'text-white/60' : 'text-text-secondary'}`}>
+                                            Attachment
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <a
+                                        href={getFileDownloadUrl(msg.filePath)}
+                                        download
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={`p-xs rounded-lg hover:bg-black/10 dark:hover:bg-white/10 shrink-0 transition-colors ${
+                                          isMyMessage ? 'text-white' : 'text-primary'
+                                        }`}
+                                      >
+                                        <Download className="h-4 w-4" />
+                                      </a>
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm break-words leading-relaxed">{msg.text}</p>
+                                  )}
                                   
                                   {msg.reactions && msg.reactions.length > 0 && (
                                     <div className="flex flex-wrap gap-xs mt-sm">
@@ -1289,11 +1328,42 @@ export const TeamManagementPage: React.FC = () => {
 
                       <div className="border-t border-border pt-md">
                         <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary mb-sm">Media Shared</h4>
-                        <div className="grid grid-cols-3 gap-xs">
-                          <div className="aspect-square bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center text-[10px] text-text-secondary font-semibold">Image 1</div>
-                          <div className="aspect-square bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center text-[10px] text-text-secondary font-semibold">Image 2</div>
-                          <div className="aspect-square bg-slate-200 dark:bg-slate-800 rounded-lg flex items-center justify-center text-[10px] text-text-secondary font-semibold">Asset 3</div>
-                        </div>
+                        {files.length === 0 ? (
+                          <p className="text-xs text-text-secondary italic">No media shared yet</p>
+                        ) : (
+                          <div className="grid grid-cols-3 gap-xs max-h-40 overflow-y-auto">
+                            {files.map((file: any) => {
+                              const fileObj = chatMessages.find((m: any) => m.id === file.id)
+                              const path = fileObj?.file_path || file.name
+                              const downloadUrl = getFileDownloadUrl(path)
+                              const isImage = file.type === 'image' || path.endsWith('.png') || path.endsWith('.jpg') || path.endsWith('.jpeg')
+                              return (
+                                <a 
+                                  key={file.id}
+                                  href={downloadUrl}
+                                  download
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title={file.name}
+                                  className="aspect-square bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg flex flex-col items-center justify-center p-xs text-center border border-border transition-colors cursor-pointer group overflow-hidden relative"
+                                >
+                                  {isImage ? (
+                                    <img 
+                                      src={downloadUrl} 
+                                      alt={file.name} 
+                                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform"
+                                    />
+                                  ) : (
+                                    <>
+                                      <FileText className="h-5 w-5 text-primary mb-xs" />
+                                      <span className="text-[8px] text-text-secondary font-semibold truncate max-w-full px-xs">{file.name}</span>
+                                    </>
+                                  )}
+                                </a>
+                              )
+                            })}
+                          </div>
+                        )}
                       </div>
 
                       {activeChatDetails && activeChatDetails.type !== 'direct' && (
@@ -1472,12 +1542,25 @@ export const TeamManagementPage: React.FC = () => {
                       </div>
                     </div>
                     <div className="mt-md pt-md border-t border-border flex justify-end gap-sm">
-                      <Button variant="ghost" className="p-xs">
+                      <a
+                        href={getFileDownloadUrl(chatMessages.find((m: any) => m.id === file.id)?.file_path || file.name)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-xs rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-text-secondary"
+                        title="View File"
+                      >
                         <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" className="p-xs">
+                      </a>
+                      <a
+                        href={getFileDownloadUrl(chatMessages.find((m: any) => m.id === file.id)?.file_path || file.name)}
+                        download
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-xs rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-text-secondary"
+                        title="Download File"
+                      >
                         <Download className="h-4 w-4" />
-                      </Button>
+                      </a>
                     </div>
                   </div>
                 ))}

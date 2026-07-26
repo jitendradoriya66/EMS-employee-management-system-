@@ -30,7 +30,6 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ setActiveNav }) =>
     page: 1,
     limit: 12,
     total: 0,
-    totalPages: 0,
   })
 
   const [showForm, setShowForm] = useState(false)
@@ -61,12 +60,15 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ setActiveNav }) =>
       setPagination(prev => ({
         ...prev,
         total: result.total,
-        totalPages: Math.ceil(result.total / prev.limit),
       }))
       return result
     },
-    true
+    false
   )
+
+  React.useEffect(() => {
+    refetch()
+  }, [pagination.page, pagination.limit, debouncedSearch, filters.department, filters.status, filters.sortBy, filters.sortOrder, refetch])
 
   const handleSearch = useCallback((search: string) => {
     setFilters(prev => ({ ...prev, search }))
@@ -152,6 +154,8 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ setActiveNav }) =>
     }
   }
 
+  const totalPages = Math.ceil(pagination.total / pagination.limit)
+
   return (
     <div className="space-y-md">
       {/* Header */}
@@ -212,7 +216,7 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ setActiveNav }) =>
         onDelete={handleDeleteEmployee}
         onRetry={refetch}
         currentPage={pagination.page}
-        totalPages={pagination.totalPages}
+        totalPages={totalPages}
         totalItems={pagination.total}
         itemsPerPage={pagination.limit}
         onPageChange={handlePageChange}
