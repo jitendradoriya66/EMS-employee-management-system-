@@ -5,7 +5,7 @@ import {
   Phone, Video, Calendar, FolderOpen, 
   Pin, Bell, Sparkles, Smile, 
   Paperclip, Mic, VideoOff, MicOff, PhoneOff, Hand,
-  Eye, Download, Info, ArrowLeft, Search, Upload, FileText
+  Eye, Download, Info, ArrowLeft, Search, Upload, FileText, Volume2, Smartphone, Radio
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useEmployees } from '@/hooks/useEmployees'
@@ -331,6 +331,86 @@ export const TeamManagementPage: React.FC = () => {
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
     const cleanPath = filePath.startsWith('/') ? filePath : `/${filePath}`
     return `${baseUrl}${cleanPath}`
+  }
+
+  const [audioOutput, setAudioOutput] = useState<'speaker' | 'earpiece'>('speaker')
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const recordedChunksRef = useRef<Blob[]>([])
+  const [isRecording, setIsRecording] = useState(false)
+
+  const toggleAudioOutput = async () => {
+    const nextOutput = audioOutput === 'speaker' ? 'earpiece' : 'speaker'
+    setAudioOutput(nextOutput)
+    const audioEl = remoteAudioRef.current || remoteVideoRef.current
+    if (audioEl && typeof (audioEl as any).setSinkId === 'function') {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices()
+        const audioOutputs = devices.filter(device => device.kind === 'audiooutput')
+        let targetDevice = audioOutputs[0]
+        if (nextOutput === 'earpiece') {
+          const earpiece = audioOutputs.find(d => d.label.toLowerCase().includes('earpiece') || d.label.toLowerCase().includes('receiver') || d.label.toLowerCase().includes('phone'))
+          if (earpiece) targetDevice = earpiece
+        } else {
+          const speaker = audioOutputs.find(d => d.label.toLowerCase().includes('speaker') || d.label.toLowerCase().includes('speakerphone') || d.label.toLowerCase().includes('audio out'))
+          if (speaker) targetDevice = speaker
+        }
+        if (targetDevice) {
+          await (audioEl as any).setSinkId(targetDevice.deviceId)
+          console.log(`Audio output routed to: ${targetDevice.label}`)
+        }
+      } catch (err) {
+        console.warn("Failed to set audio sink:", err)
+      }
+    }
+  }
+
+  const startScreenRecording = async () => {
+    try {
+      const displayStream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: true
+      })
+      recordedChunksRef.current = []
+      const options = { mimeType: 'video/webm; codecs=vp9' }
+      const recorder = new MediaRecorder(displayStream, options)
+      mediaRecorderRef.current = recorder
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          recordedChunksRef.current.push(event.data)
+        }
+      }
+      recorder.onstop = async () => {
+        const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' })
+        const file = new File([blob], `recording-${new Date().getTime()}.webm`, { type: 'video/webm' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = file.name
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        if (activeChatId) {
+          await sendChatMessage(
+            `Sent an attachment: ${file.name}`,
+            `/media/uploads/${file.name}`,
+            'video'
+          )
+        }
+        displayStream.getTracks().forEach(track => track.stop())
+        setIsRecording(false)
+      }
+      recorder.start()
+      setIsRecording(true)
+    } catch (err) {
+      console.error("Failed to start screen recording:", err)
+    }
+  }
+
+  const stopScreenRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop()
+    }
   }
 
   useEffect(() => {
@@ -1792,6 +1872,22 @@ export const TeamManagementPage: React.FC = () => {
                         {activeCall.isCameraOff ? <VideoOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Video className="h-4 w-4 sm:h-5 sm:w-5" />}
                       </Button>
                     )}
+                    <Button 
+                      variant="ghost" 
+                      onClick={toggleAudioOutput}
+                      title={`Switch to ${audioOutput === 'speaker' ? 'Earpiece (Mobile)' : 'Speaker'}`}
+                      className={`p-sm sm:p-md rounded-full shadow-md bg-slate-800 text-slate-300 hover:bg-slate-700`}
+                    >
+                      {audioOutput === 'speaker' ? <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" /> : <Smartphone className="h-4 w-4 sm:h-5 sm:w-5" />}
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      onClick={isRecording ? stopScreenRecording : startScreenRecording}
+                      title={isRecording ? "Stop Screen Recording" : "Record Screen"}
+                      className={`p-sm sm:p-md rounded-full shadow-md transition-all ${isRecording ? 'bg-red-600 text-white animate-pulse' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                    >
+                      <Radio className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </Button>
                     <Button 
                       variant="ghost" 
                       onClick={() => setActiveCall(prev => prev ? { ...prev, isHandRaised: !prev.isHandRaised } : null)}

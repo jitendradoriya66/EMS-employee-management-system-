@@ -74,7 +74,7 @@ export const Header: React.FC<HeaderProps> = ({
         onCancel={() => setLogoutConfirmOpen(false)}
       />
 
-      <header className="bg-card border-b border-border shadow-sm sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-card/90 no-print">
+      <header className="bg-card border-b border-border shadow-sm sticky top-0 z-[9999] backdrop-blur supports-[backdrop-filter]:bg-card/90 no-print">
         <div className="h-16 px-md md:px-lg flex items-center justify-between">
           {/* Left side */}
           <div className="flex items-center gap-md">
@@ -118,7 +118,7 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Notifications Dropdown */}
               {notificationsOpen && (
-                <div className="fixed left-4 right-4 top-20 z-50 overflow-hidden rounded-3xl border border-border bg-card shadow-2xl shadow-slate-900/20 md:absolute md:left-auto md:right-0 md:top-full md:mt-3 md:w-96 md:max-w-none">
+                <div className="fixed left-4 right-4 top-20 z-[10000] overflow-hidden rounded-3xl border border-border bg-card shadow-2xl shadow-slate-900/20 md:absolute md:left-auto md:right-0 md:top-full md:mt-3 md:w-96 md:max-w-none">
                   <div className="flex items-start justify-between gap-md border-b border-border bg-gradient-to-r from-slate-950 via-slate-900 to-slate-800 px-lg py-md text-white">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Activity center</p>
