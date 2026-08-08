@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   MessageSquare, Users, UserPlus, Send, Plus, X, 
   Phone, Video, Calendar, FolderOpen, 
-  Pin, Bell, Sparkles, Smile, 
+  Pin, Bell, Sparkles, 
   Paperclip, Mic, VideoOff, MicOff, PhoneOff, Hand,
   Eye, Download, Info, ArrowLeft, Search, Upload, FileText, Volume2, Smartphone, Radio
 } from 'lucide-react'
@@ -1239,7 +1239,9 @@ export const TeamManagementPage: React.FC = () => {
                     </div>
 
                     {/* Message list */}
-                    <div className="flex-1 overflow-y-auto p-lg space-y-md scrollbar-thin">
+                    <div className={`flex-1 overflow-x-hidden ${
+                      (messages[activeChatId] || []).length === 0 && !messagesLoading ? 'overflow-y-hidden' : 'overflow-y-auto'
+                    } p-lg space-y-md scrollbar-thin`}>
                       {messagesLoading ? (
                         Array.from({ length: 4 }).map((_, i) => (
                           <div key={i} className={`flex items-start gap-sm max-w-lg ${i % 2 === 0 ? '' : 'ml-auto flex-row-reverse'}`}>
@@ -1403,9 +1405,6 @@ export const TeamManagementPage: React.FC = () => {
                         onKeyDown={e => { if (e.key === 'Enter') handleSendMessage() }}
                         className="flex-1 min-w-0 rounded-xl border border-border bg-background px-md py-sm text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                       />
-                      <Button variant="ghost" onClick={() => handleSendMessage('👍')} className="p-xs text-text-secondary shrink-0">
-                        <Smile className="h-4 w-4" />
-                      </Button>
                       <Button variant="primary" className="p-sm rounded-xl shrink-0" onClick={() => handleSendMessage()}>
                         <Send className="h-4 w-4" />
                       </Button>
