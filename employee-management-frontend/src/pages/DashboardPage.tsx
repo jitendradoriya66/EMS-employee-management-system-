@@ -9,8 +9,9 @@ import { useAnnouncements } from '@/hooks/useAnnouncements'
 import { useTasks } from '@/hooks/useTasks'
 import { useHolidays } from '@/hooks/useHolidays'
 import { useDepartments } from '@/hooks/useDepartments'
-import apiClient from '@/utils/apiClient'
 import { UnifiedLoader } from '@/components/common/UnifiedLoader'
+import { useDashboard } from '@/hooks/useDashboard'
+
 
 type RangeKey = '7d' | '30d' | '90d' | 'all'
 
@@ -134,17 +135,6 @@ function sum(values: number[]) {
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat('en-US').format(value)
-}
-
-function getRangeCutoff(range: RangeKey) {
-  if (range === 'all') {
-    return null
-  }
-
-  const days = range === '7d' ? 7 : range === '30d' ? 30 : 90
-  const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() - days)
-  return cutoff
 }
 
 function donutSegments(data: DepartmentStat[]) {
@@ -339,28 +329,18 @@ export const DashboardPage: React.FC = () => {
   const [employeeFilter, setEmployeeFilter] = useState('all')
   const [departmentFilter, setDepartmentFilter] = useState('all')
   const [rangeFilter, setRangeFilter] = useState<RangeKey>('30d')
-  const [onLeaveCount, setOnLeaveCount] = useState(0)
-
-  React.useEffect(() => {
-    if (!isEmployee) {
-      apiClient.get('/api/v1/leave/?status=approved&page_size=100')
-        .then(res => {
-          const results = res.data.results || res.data
-          const todayStr = new Date().toISOString().slice(0, 10)
-          const activeLeaves = results.filter((leave: any) => {
-            return leave.start_date <= todayStr && leave.end_date >= todayStr
-          })
-          setOnLeaveCount(activeLeaves.length)
-        })
-        .catch(err => console.error('Failed to fetch active leaves for dashboard', err))
-    }
-  }, [isEmployee])
 
   const { employees: realEmployees, loading: employeesLoading } = useEmployees()
   const { loading: announcementsLoading } = useAnnouncements()
   const { loading: tasksLoading } = useTasks()
   const { holidays, loading: holidaysLoading } = useHolidays()
   const { departments: dbDepartments } = useDepartments()
+
+  const { metrics, loading: dashboardLoading } = useDashboard(
+    isEmployee ? 'all' : employeeFilter,
+    isEmployee ? 'all' : departmentFilter,
+    rangeFilter
+  )
   
   // ensure we have a fallback for employees to prevent crash before data loads
   const mockEmployees = realEmployees || []
@@ -376,238 +356,130 @@ export const DashboardPage: React.FC = () => {
     [dbDepartments]
   )
 
-  const effectiveEmployeeFilter = isEmployee ? currentEmployee.id : employeeFilter
-  const effectiveDepartmentFilter = isEmployee ? currentEmployee.department : departmentFilter
-
-  const filteredEmployees = useMemo(() => {
-    return mockEmployees.filter(employee => {
-      const matchesEmployee = effectiveEmployeeFilter === 'all' || employee.id === effectiveEmployeeFilter
-      const matchesDepartment = effectiveDepartmentFilter === 'all' || employee.department === effectiveDepartmentFilter
-      return matchesEmployee && matchesDepartment
-    })
-  }, [effectiveDepartmentFilter, effectiveEmployeeFilter])
-
-  const filteredLogs = useMemo(() => {
-    const cutoff = getRangeCutoff(rangeFilter)
-    return filteredEmployees.flatMap(employee => {
-      return (employee.attendanceLog || [])
-        .filter(log => {
-          if (!cutoff) return true
-          return new Date(log.date) >= cutoff
-        })
-        .map(log => ({
-          ...log,
-          employeeId: employee.id,
-          employeeName: `${employee.firstName} ${employee.lastName}`,
-          department: employee.department,
-        }))
-    })
-  }, [filteredEmployees, rangeFilter])
-
-  const stats = useMemo<DashboardMetric[]>(() => {
+  const stats = useMemo<Array<DashboardMetric & { href?: string }>>(() => {
     if (isEmployee) {
-      const myLogs = filteredLogs.filter(log => log.employeeId === currentEmployee.id)
-      const myTotalAttendance = myLogs.length || 1
-      const myPresentCount = myLogs.filter(log => log.status === 'present').length
-      const myAttendanceRate = Math.round((myPresentCount / myTotalAttendance) * 100)
-      const myTotalHours = myLogs.reduce((total, log) => total + (log.hoursWorked || 0), 0)
-      
       return [
         {
           label: 'My Attendance Rate',
-          value: `${myAttendanceRate}%`,
-          delta: `${myLogs.filter(log => log.status === 'late').length} late check-ins`,
+          value: metrics?.my_attendance_rate !== undefined ? `${metrics.my_attendance_rate}%` : '0%',
+          delta: 'Check-ins evaluation',
           icon: Clock3,
           tone: 'from-cyan-500 to-sky-500',
+          href: '/attendance',
         },
         {
           label: 'Hours Logged',
-          value: `${Math.round(myTotalHours * 10) / 10} hrs`,
+          value: metrics?.hours_logged !== undefined ? `${metrics.hours_logged} hrs` : '0 hrs',
           delta: 'Total hours worked in range',
           icon: Activity,
           tone: 'from-primary-500 to-indigo-500',
+          href: '/attendance',
         },
         {
           label: 'Available Leave Balance',
-          value: '20 days',
+          value: metrics?.available_leave_balance !== undefined ? `${metrics.available_leave_balance} days` : '20 days',
           delta: 'Deducted from approved leaves',
           icon: CalendarDays,
           tone: 'from-amber-500 to-orange-500',
+          href: '/leave',
         },
         {
           label: 'My Performance Score',
-          value: `${currentEmployee.performanceScore || (currentEmployee as any).performance_score || 100}%`,
+          value: metrics?.my_performance_score !== undefined ? `${metrics.my_performance_score}%` : '100%',
           delta: 'Current scorecard evaluation',
           icon: Target,
           tone: 'from-emerald-500 to-teal-500',
+          href: '/profile',
         },
         {
           label: 'My Monthly Salary',
-          value: currentEmployee.salary ? formatCurrency(currentEmployee.salary) : 'N/A',
+          value: metrics?.my_monthly_salary !== undefined ? formatCurrency(metrics.my_monthly_salary) : 'N/A',
           delta: 'Base monthly pay',
           icon: DollarSign,
           tone: 'from-violet-500 to-fuchsia-500',
+          href: '/payroll',
         }
       ]
     }
 
-    const activeEmployees = filteredEmployees.filter(employee => employee.status === 'active').length
-    const totalAttendance = filteredLogs.length || 1
-    const presentCount = filteredLogs.filter(log => log.status === 'present' || log.status === 'late').length
-    const payrollTotal = filteredEmployees.reduce((total, employee) => total + (employee.salary || 0), 0)
-
-    const performanceEmployees = filteredEmployees.filter(employee => {
-      const score = employee.performanceScore ?? (employee as any).performance_score
-      return typeof score === 'number' && score > 0
-    })
-    const totalPerformanceScore = performanceEmployees.reduce((total, employee) => {
-      const score = employee.performanceScore ?? (employee as any).performance_score
-      return total + (score || 0)
-    }, 0)
-    const avgPerfValue = performanceEmployees.length ? Math.round(totalPerformanceScore / performanceEmployees.length) : null
-
     return [
       {
         label: 'Total Employees',
-        value: formatNumber(filteredEmployees.length),
-        delta: '+8.4% MoM',
+        value: metrics?.total_employees !== undefined ? formatNumber(metrics.total_employees) : '0',
+        delta: 'Total headcount registered',
         icon: Users,
         tone: 'from-primary-500 to-indigo-500',
+        href: '/employees',
       },
       {
         label: 'Active Workforce',
-        value: formatNumber(activeEmployees),
-        delta: `${Math.round((activeEmployees / Math.max(filteredEmployees.length, 1)) * 100)}% utilization`,
+        value: metrics?.active_workforce !== undefined ? formatNumber(metrics.active_workforce) : '0',
+        delta: 'Currently active contracts',
         icon: CheckCircle2,
         tone: 'from-emerald-500 to-teal-500',
+        href: '/employees',
       },
       {
         label: 'Attendance Rate',
-        value: `${Math.round((presentCount / totalAttendance) * 100)}%`,
-        delta: `${filteredLogs.filter(log => log.status === 'late').length} late check-ins`,
+        value: metrics?.attendance_rate !== undefined ? `${metrics.attendance_rate}%` : '0%',
+        delta: 'Overall presence in range',
         icon: Clock3,
         tone: 'from-cyan-500 to-sky-500',
+        href: '/attendance',
       },
       {
         label: 'On Leave',
-        value: formatNumber(onLeaveCount),
+        value: metrics?.on_leave !== undefined ? formatNumber(metrics.on_leave) : '0',
         delta: 'Approved and active today',
         icon: CalendarDays,
         tone: 'from-amber-500 to-orange-500',
+        href: '/leave',
       },
       {
         label: 'Payroll / Month',
-        value: formatCurrency(payrollTotal / 12),
-        delta: 'Forecasted recurring cost',
+        value: metrics?.payroll_total !== undefined ? formatCurrency(metrics.payroll_total / 12) : '$0.00',
+        delta: 'Forecasted monthly recurring cost',
         icon: DollarSign,
         tone: 'from-violet-500 to-fuchsia-500',
+        href: '/payroll',
       },
       {
         label: 'Avg. Performance',
-        value: avgPerfValue !== null ? `${avgPerfValue}%` : 'Awaiting Review',
-        delta: avgPerfValue !== null ? '1:1 review readiness' : 'No performance logs',
+        value: metrics?.avg_performance !== undefined && metrics.avg_performance !== null ? `${metrics.avg_performance}%` : 'Awaiting Review',
+        delta: metrics?.avg_performance !== undefined && metrics.avg_performance !== null ? 'Evaluation standard' : 'No performance logs',
         icon: Target,
         tone: 'from-slate-500 to-slate-700',
+        href: '/analytics',
       },
     ]
-  }, [filteredEmployees, filteredLogs, isEmployee, currentEmployee, onLeaveCount])
+  }, [metrics, isEmployee, currentEmployee])
 
   const departmentStats = useMemo<DepartmentStat[]>(() => {
-    const total = Math.max(filteredEmployees.length, 1)
-    const buckets = filteredEmployees.reduce<Record<string, number>>((accumulator, employee) => {
-      accumulator[employee.department] = (accumulator[employee.department] || 0) + 1
-      return accumulator
-    }, {})
-
-    return Object.entries(buckets)
-      .map(([department, count]) => ({
-        department,
-        count,
-        percentage: Math.round((count / total) * 100),
-      }))
-      .sort((a, b) => b.count - a.count)
-  }, [filteredEmployees])
+    return metrics?.department_stats || []
+  }, [metrics])
 
   const trendData = useMemo<ChartPoint[]>(() => {
-    const byDate = filteredLogs.reduce<Record<string, number>>((accumulator, log) => {
-      const val = isEmployee ? (log.hoursWorked || 0) : 1
-      accumulator[log.date] = (accumulator[log.date] || 0) + val
-      return accumulator
-    }, {})
-
-    const sortedEntries = Object.entries(byDate).sort((a, b) => a[0].localeCompare(b[0]))
-
-    if (sortedEntries.length === 0) {
-      const points = []
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date()
-        d.setDate(d.getDate() - i)
-        points.push({
-          label: formatDate(d.toISOString().split('T')[0]),
-          value: isEmployee ? 8 : 4 + Math.round(Math.random() * 4)
-        })
-      }
-      return points
+    if (metrics?.trend_data && metrics.trend_data.length > 0) {
+      return metrics.trend_data.map(item => ({
+        label: formatDate(item.label),
+        value: item.value
+      }))
     }
-
-    return sortedEntries
-      .map(([label, value]) => ({ label: formatDate(label), value }))
-      .slice(-10)
-  }, [filteredLogs, isEmployee])
+    const points = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      points.push({
+        label: formatDate(d.toISOString().split('T')[0]),
+        value: 0
+      })
+    }
+    return points
+  }, [metrics])
 
   const recentActivities = useMemo<ActivityItem[]>(() => {
-    const employeeActivities = [...mockEmployees]
-      .sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''))
-      .slice(0, 5)
-      .map((employee, idx) => {
-        const name = `${employee.firstName} ${employee.lastName}`
-        const dept = employee.department || 'Unassigned'
-        const dateStr = employee.startDate ? formatDate(employee.startDate) : 'recently'
-        
-        let title = `Super User approved request for ${name}`
-        let description = `Assigned role: Employee in ${dept} Team on ${dateStr}`
-        let time = 'Just now'
-
-        if (idx === 1) {
-          title = `Admin / HR added new Employee ${name}`
-          description = `Position: ${employee.position || 'Specialist'} • Started ${dateStr}`
-          time = '1 hour ago'
-        } else if (idx === 2) {
-          title = `Super User accepted registration request`
-          description = `Approved ${name} with role: Employee`
-          time = '1 day ago'
-        } else if (idx === 3 && employee.manager) {
-          title = `Supervisor assigned by Admin`
-          description = `${employee.manager} designated as supervisor for ${name}`
-          time = '2 days ago'
-        } else if (idx >= 4) {
-          title = `Super User added new Administrator ${name}`
-          description = `Granted HR/Admin credentials to control workspace`
-          time = '3 days ago'
-        }
-
-        return {
-          title,
-          description,
-          time,
-          date: employee.startDate || ''
-        }
-      })
-
-    const latestAttendance = [...filteredLogs]
-      .sort((a, b) => b.date.localeCompare(a.date))
-      .slice(0, 3)
-      .map(log => ({
-        title: `${log.employeeName} checked in`,
-        description: `Status: ${log.status.toUpperCase()} • Department: ${log.department} • Time: ${log.checkIn || '09:00'}`,
-        time: formatDate(log.date),
-        date: log.date,
-      }))
-
-    return [...latestAttendance, ...employeeActivities]
-      .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
-      .slice(0, 6)
-  }, [mockEmployees, filteredLogs])
+    return metrics?.recent_activities || []
+  }, [metrics])
 
 
 
@@ -634,7 +506,7 @@ export const DashboardPage: React.FC = () => {
     ? 'Review your attendance, leave, payroll, and company announcements from one personal workspace.'
     : 'Monitor headcount, attendance, payroll, leave, and hiring activity from a single premium control center.'
 
-  if (employeesLoading || announcementsLoading || tasksLoading || holidaysLoading) {
+  if (employeesLoading || announcementsLoading || tasksLoading || holidaysLoading || dashboardLoading) {
     if (isEmployee) {
       return <UnifiedLoader message="Loading your HRMS dashboard..." />
     }
@@ -778,24 +650,25 @@ export const DashboardPage: React.FC = () => {
         {stats.map((stat, index) => {
           const Icon = stat.icon
           return (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, delay: index * 0.04 }}
-              className="group rounded-3xl border border-border bg-card p-lg shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
-            >
-              <div className="flex items-start justify-between gap-md">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-secondary">{stat.label}</p>
-                  <p className="mt-sm text-3xl font-black tracking-tight text-text-primary">{stat.value}</p>
-                  <p className="mt-xs text-sm font-medium text-text-secondary">{stat.delta}</p>
+            <Link key={stat.label} to={stat.href || '#'}>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: index * 0.04 }}
+                className="group rounded-3xl border border-border bg-card p-lg shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl h-full block cursor-pointer"
+              >
+                <div className="flex items-start justify-between gap-md">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-text-secondary">{stat.label}</p>
+                    <p className="mt-sm text-3xl font-black tracking-tight text-text-primary">{stat.value}</p>
+                    <p className="mt-xs text-sm font-medium text-text-secondary">{stat.delta}</p>
+                  </div>
+                  <div className={`rounded-2xl bg-gradient-to-br ${stat.tone} p-3 text-white shadow-lg shadow-slate-900/10`}>
+                    <Icon className="h-6 w-6" />
+                  </div>
                 </div>
-                <div className={`rounded-2xl bg-gradient-to-br ${stat.tone} p-3 text-white shadow-lg shadow-slate-900/10`}>
-                  <Icon className="h-6 w-6" />
-                </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            </Link>
           )
         })}
       </div>
