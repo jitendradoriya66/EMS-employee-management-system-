@@ -693,62 +693,59 @@ export const AnalyticsPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              <AnimatePresence mode="popLayout">
-                {paginatedEmployeesList.length > 0 ? (
-                  paginatedEmployeesList.map((emp) => (
-                    <motion.tr
-                      key={emp.id}
-                      layoutId={`row-${emp.id}`}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="border-b border-border hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
-                    >
-                      <td className="py-md px-md">
-                        <div className="flex items-center gap-md">
-                          <div className="h-8 w-8 rounded-full overflow-hidden border border-border flex-shrink-0 bg-slate-100 flex items-center justify-center font-bold text-xs text-text-secondary">
-                            {emp.avatar ? (
-                              <img src={emp.avatar} alt={`${emp.firstName} ${emp.lastName}`} className="h-full w-full object-cover" />
-                            ) : (
-                              `${emp.firstName.charAt(0)}${emp.lastName.charAt(0)}`
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-semibold text-text-primary text-xs sm:text-sm">{emp.firstName} {emp.lastName}</p>
-                            <p className="text-[10px] text-text-secondary">{emp.email}</p>
-                          </div>
+              {paginatedEmployeesList.length > 0 ? (
+                paginatedEmployeesList.map((emp) => (
+                  <motion.tr
+                    key={emp.id}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="border-b border-border hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                  >
+                    <td className="py-md px-md">
+                      <div className="flex items-center gap-md">
+                        <div className="h-8 w-8 rounded-full overflow-hidden border border-border flex-shrink-0 bg-slate-100 flex items-center justify-center font-bold text-xs text-text-secondary">
+                          {emp.avatar ? (
+                            <img src={emp.avatar} alt={`${emp.firstName} ${emp.lastName}`} className="h-full w-full object-cover" />
+                          ) : (
+                            `${emp.firstName.charAt(0)}${emp.lastName.charAt(0)}`
+                          )}
                         </div>
-                      </td>
-                      <td className="py-md px-md">
-                        <span className={`px-sm py-xs rounded text-[10px] font-bold ${getDepartmentColor(emp.department)}`}>
-                          {emp.department}
-                        </span>
-                      </td>
-                      <td className="py-md px-md">
-                        <span className={`badge ${getStatusColor(emp.status)} text-[10px] font-bold`}>
-                          {getStatusLabel(emp.status)}
-                        </span>
-                      </td>
-                      <td className="py-md px-md text-xs text-text-primary">{formatDate(emp.startDate)}</td>
-                      <td className="py-md px-md text-right">
-                        <Link
-                          to={`/employees/${emp.id}`}
-                          className="inline-flex items-center gap-xs text-xs font-bold text-primary hover:text-primary-600 transition-colors"
-                        >
-                          <Eye className="h-3 w-3" />
-                          View Profile
-                        </Link>
-                      </td>
-                    </motion.tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={5} className="py-xl text-center text-text-secondary text-xs sm:text-sm">
-                      No employee records match the active criteria. Click Reset Filters to view all.
+                        <div>
+                          <p className="font-semibold text-text-primary text-xs sm:text-sm">{emp.firstName} {emp.lastName}</p>
+                          <p className="text-[10px] text-text-secondary">{emp.email}</p>
+                        </div>
+                      </div>
                     </td>
-                  </tr>
-                )}
-              </AnimatePresence>
+                    <td className="py-md px-md">
+                      <span className={`px-sm py-xs rounded text-[10px] font-bold ${getDepartmentColor(emp.department)}`}>
+                        {emp.department}
+                      </span>
+                    </td>
+                    <td className="py-md px-md">
+                      <span className={`badge ${getStatusColor(emp.status)} text-[10px] font-bold`}>
+                        {getStatusLabel(emp.status)}
+                      </span>
+                    </td>
+                    <td className="py-md px-md text-xs text-text-primary">{formatDate(emp.startDate)}</td>
+                    <td className="py-md px-md text-right">
+                      <Link
+                        to={`/employees/${emp.id}`}
+                        className="inline-flex items-center gap-xs text-xs font-bold text-primary hover:text-primary-600 transition-colors"
+                      >
+                        <Eye className="h-3 w-3" />
+                        View Profile
+                      </Link>
+                    </td>
+                  </motion.tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="py-xl text-center text-text-secondary text-xs sm:text-sm">
+                    No employee records match the active criteria. Click Reset Filters to view all.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
