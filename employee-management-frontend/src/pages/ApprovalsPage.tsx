@@ -299,7 +299,7 @@ export const ApprovalsPage: React.FC = () => {
                     <CircleCheck className="h-4 w-4" />
                     Approve request
                   </Button>
-                  <Button variant="secondary" className="flex-1 gap-sm border-white/20 text-white hover:bg-white/10" onClick={() => setConfirmReject(focusedUser)}>
+                  <Button variant="secondary" className="flex-1 gap-sm bg-transparent border-white/20 text-white hover:bg-white/10" onClick={() => setConfirmReject(focusedUser)}>
                     <CircleX className="h-4 w-4" />
                     Reject request
                   </Button>
