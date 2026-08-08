@@ -933,7 +933,9 @@ export const TeamManagementPage: React.FC = () => {
     return files.length
   }, [files])
 
-  if (employeesLoading) {
+  const isPageLoading = employeesLoading || (activeChatId !== null && messagesLoading)
+
+  if (isPageLoading) {
     return <UnifiedLoader message="Loading workspace team portal..." />
   }
 
@@ -942,7 +944,7 @@ export const TeamManagementPage: React.FC = () => {
       activeTab === 'chat' && activeChatId ? 'fixed inset-0 z-50 m-0 pb-0 rounded-none' : 'pb-16 lg:pb-0'
     }`}>
       {/* Persistent Left Sidebar */}
-      <div className={`w-full lg:w-80 h-[calc(100dvh-8rem)] mb-4 lg:h-auto lg:mb-0 flex flex-col rounded-2xl lg:rounded-3xl border border-border bg-card p-md shadow-sm no-print ${
+      <div className={`w-full lg:w-80 h-[calc(100dvh-9.5rem)] m-sm lg:m-0 lg:h-auto flex flex-col rounded-2xl lg:rounded-3xl border border-border bg-card p-md shadow-sm no-print ${
         activeTab === 'chat' && !activeChatId ? 'flex' : 'hidden lg:flex'
       }`}>
         {/* Workspace Title & Search */}
