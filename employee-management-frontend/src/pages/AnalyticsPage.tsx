@@ -273,10 +273,6 @@ export const AnalyticsPage: React.FC = () => {
     setCurrentPage(1)
   }, [dateRange, selectedDept, selectedStatus])
 
-  if (loading) {
-    return <UnifiedLoader message="Loading organization analytics..." />
-  }
-
   const filterByDateRange = (startDateStr: string, range: string): boolean => {
     if (range === 'all') return true
     const startDate = new Date(startDateStr)
@@ -446,6 +442,10 @@ export const AnalyticsPage: React.FC = () => {
   const itemVariants = {
     hidden: { opacity: 0, y: 15 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+  }
+
+  if (loading) {
+    return <UnifiedLoader message="Loading organization analytics..." />
   }
 
   return (
