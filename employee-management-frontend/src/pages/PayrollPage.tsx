@@ -48,14 +48,7 @@ export const PayrollPage: React.FC = () => {
   const totalPayslipsPages = Math.max(1, Math.ceil(adminTotalCount / itemsPerPage));
 
   if (loading && !employeePayslips.length && !adminPayslips.length) {
-    if (isEmployee) {
-      return <UnifiedLoader message="Loading your payslip history..." />
-    }
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
-      </div>
-    );
+    return <UnifiedLoader message="Loading payslip history..." />
   }
 
   if (isEmployee) {

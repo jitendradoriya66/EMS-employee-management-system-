@@ -69,7 +69,8 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ setActiveNav }) =>
 
   React.useEffect(() => {
     refetch()
-  }, [pagination.page, pagination.limit, debouncedSearch, filters.department, filters.status, filters.sortBy, filters.sortOrder, refetch])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination.page, pagination.limit, debouncedSearch, filters.department, filters.status, filters.sortBy, filters.sortOrder])
 
   const handleSearch = useCallback((search: string) => {
     setFilters(prev => ({ ...prev, search }))

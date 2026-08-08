@@ -123,9 +123,7 @@ export const UserManagementPage: React.FC = () => {
     fetchUsers().finally(() => setUsersLoading(false))
   }, [])
 
-  if (usersLoading) {
-    return <UnifiedLoader message="Loading user management directory..." />
-  }
+
 
   const showToast = (message: string) => {
     setToast(message)
@@ -249,6 +247,10 @@ export const UserManagementPage: React.FC = () => {
       setSelectedUserId(user.id)
       setOpenMenuId(null)
     }
+  }
+
+  if (usersLoading) {
+    return <UnifiedLoader message="Loading user management directory..." />
   }
 
   return (

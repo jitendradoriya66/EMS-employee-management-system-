@@ -507,24 +507,7 @@ export const DashboardPage: React.FC = () => {
     : 'Monitor headcount, attendance, payroll, leave, and hiring activity from a single premium control center.'
 
   if (employeesLoading || announcementsLoading || tasksLoading || holidaysLoading || dashboardLoading) {
-    if (isEmployee) {
-      return <UnifiedLoader message="Loading your HRMS dashboard..." />
-    }
-    return (
-      <div className="space-y-lg animate-pulse p-lg">
-        <div className="h-28 bg-slate-200 dark:bg-slate-800 rounded-3xl mb-lg" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-md">
-          <div className="h-24 bg-slate-200 dark:bg-slate-800 rounded-2xl" />
-          <div className="h-24 bg-slate-200 dark:bg-slate-800 rounded-2xl" />
-          <div className="h-24 bg-slate-200 dark:bg-slate-800 rounded-2xl" />
-          <div className="h-24 bg-slate-200 dark:bg-slate-800 rounded-2xl" />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-lg">
-          <div className="lg:col-span-2 h-96 bg-slate-200 dark:bg-slate-800 rounded-3xl" />
-          <div className="h-96 bg-slate-200 dark:bg-slate-800 rounded-3xl" />
-        </div>
-      </div>
-    )
+    return <UnifiedLoader message="Loading your HRMS dashboard..." />
   }
 
   return (

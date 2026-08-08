@@ -60,9 +60,7 @@ export const ApprovalsPage: React.FC = () => {
     fetchUsers().finally(() => setApprovalsLoading(false))
   }, [])
 
-  if (approvalsLoading) {
-    return <UnifiedLoader message="Loading pending registrations..." />
-  }
+
 
   const pendingUsers = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -85,6 +83,10 @@ export const ApprovalsPage: React.FC = () => {
     rejectUser(user.id)
     setConfirmReject(null)
     setFocusedUser(null)
+  }
+
+  if (approvalsLoading) {
+    return <UnifiedLoader message="Loading pending registrations..." />
   }
 
   return (
