@@ -10,6 +10,7 @@ import { Input } from '@/components/common/Input'
 import { Select } from '@/components/common/Select'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import type { UserAccount, UserRole } from '@/types'
+import { UnifiedLoader } from '@/components/common/UnifiedLoader'
 
 const roleLabels: Record<UserRole, string> = {
   super_admin: 'Super Admin',
@@ -53,9 +54,15 @@ export const ApprovalsPage: React.FC = () => {
     ]
   }, [departments])
 
+  const [approvalsLoading, setApprovalsLoading] = useState(true)
+
   React.useEffect(() => {
-    fetchUsers()
+    fetchUsers().finally(() => setApprovalsLoading(false))
   }, [])
+
+  if (approvalsLoading) {
+    return <UnifiedLoader message="Loading pending registrations..." />
+  }
 
   const pendingUsers = useMemo(() => {
     const query = search.trim().toLowerCase()

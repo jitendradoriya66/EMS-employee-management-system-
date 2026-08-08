@@ -11,6 +11,7 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { Alert } from '@/components/common/Alert'
 import { useAsync, useDebounce } from '@/hooks'
 import { AnimatePresence } from 'framer-motion'
+import { UnifiedLoader } from '@/components/common/UnifiedLoader'
 
 interface EmployeesPageProps {
   setActiveNav?: (nav: string) => void
@@ -155,6 +156,10 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ setActiveNav }) =>
   }
 
   const totalPages = Math.ceil(pagination.total / pagination.limit)
+
+  if (listLoading && employees.length === 0) {
+    return <UnifiedLoader message="Loading employees..." />
+  }
 
   return (
     <div className="space-y-md">

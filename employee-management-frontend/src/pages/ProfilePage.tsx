@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { motion } from 'framer-motion'
 import { useEmployees } from '@/hooks/useEmployees'
 import { updateEmployee } from '@/utils/api'
+import { UnifiedLoader } from '@/components/common/UnifiedLoader'
 
 export const ProfilePage: React.FC = () => {
   const { user } = useAuth()
@@ -157,17 +158,7 @@ export const ProfilePage: React.FC = () => {
   }
 
   if (loading) {
-    return (
-      <div className="space-y-lg animate-pulse p-lg">
-        <div className="h-10 w-1/3 bg-slate-200 dark:bg-slate-800 rounded-lg mb-lg" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-md mb-lg">
-          <div className="h-24 bg-slate-200 dark:bg-slate-800 rounded-2xl" />
-          <div className="h-24 bg-slate-200 dark:bg-slate-800 rounded-2xl" />
-          <div className="h-24 bg-slate-200 dark:bg-slate-800 rounded-2xl" />
-        </div>
-        <div className="h-96 bg-slate-200 dark:bg-slate-800 rounded-3xl" />
-      </div>
-    )
+    return <UnifiedLoader message="Loading profile details..." />
   }
 
   if (!employeeProfile) {

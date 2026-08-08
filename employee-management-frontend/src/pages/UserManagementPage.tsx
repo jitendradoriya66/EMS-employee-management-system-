@@ -31,6 +31,7 @@ import { Pagination } from '@/components/common/Pagination'
 import { useAuth } from '@/contexts/AuthContext'
 import { useDepartments } from '@/hooks/useDepartments'
 import type { UserAccount, UserRole } from '@/types'
+import { UnifiedLoader } from '@/components/common/UnifiedLoader'
 
 const roleLabels: Record<UserRole, string> = {
   super_admin: 'Super Admin',
@@ -116,9 +117,15 @@ export const UserManagementPage: React.FC = () => {
     ]
   }, [departments])
 
+  const [usersLoading, setUsersLoading] = useState(true)
+
   useEffect(() => {
-    fetchUsers()
+    fetchUsers().finally(() => setUsersLoading(false))
   }, [])
+
+  if (usersLoading) {
+    return <UnifiedLoader message="Loading user management directory..." />
+  }
 
   const showToast = (message: string) => {
     setToast(message)

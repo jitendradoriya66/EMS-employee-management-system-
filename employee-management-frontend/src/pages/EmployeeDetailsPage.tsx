@@ -5,10 +5,10 @@ import { Employee } from '@/types'
 import { getEmployeeById } from '@/utils/api'
 import { Button } from '@/components/common/Button'
 import { Badge } from '@/components/common/Badge'
-import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { Alert } from '@/components/common/Alert'
 import { formatDate, getStatusColor, getStatusLabel, getInitials, formatCurrency } from '@/utils/helpers'
 import { motion } from 'framer-motion'
+import { UnifiedLoader } from '@/components/common/UnifiedLoader'
 
 export const EmployeeDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -40,15 +40,7 @@ export const EmployeeDetailsPage: React.FC = () => {
   }, [id])
 
   if (loading) {
-    return (
-      <div className="space-y-lg">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-md">
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </Button>
-        <LoadingSkeleton rows={5} />
-      </div>
-    )
+    return <UnifiedLoader message="Loading employee details..." />
   }
 
   if (error || !employee) {

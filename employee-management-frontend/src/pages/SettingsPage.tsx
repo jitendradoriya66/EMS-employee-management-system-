@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Settings as SettingsIcon, Bell, Palette, LogOut } from 'lucide-react'
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
@@ -10,8 +10,8 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import apiClient from '@/utils/apiClient'
-import { useEffect } from 'react'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { UnifiedLoader } from '@/components/common/UnifiedLoader'
 
 interface SettingSection {
   id: string
@@ -55,6 +55,8 @@ export const SettingsPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
+  const [settingsLoading, setSettingsLoading] = useState(true)
+
   useEffect(() => {
     const fetchPrefs = async () => {
       try {
@@ -68,10 +70,16 @@ export const SettingsPage: React.FC = () => {
         }
       } catch (err) {
         console.error('Failed to fetch preferences', err)
+      } finally {
+        setSettingsLoading(false)
       }
     }
     fetchPrefs()
   }, [])
+
+  if (settingsLoading) {
+    return <UnifiedLoader message="Loading settings..." />
+  }
 
   const settings: SettingSection[] = [
     { id: 'profile', title: 'Profile', description: 'Manage your account', icon: SettingsIcon },
