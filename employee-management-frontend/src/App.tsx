@@ -206,8 +206,12 @@ function AppLayout() {
           userRole={roleLabels[role]}
         />
 
-        <main className="flex-1 overflow-y-auto flex flex-col print:block print:overflow-visible">
-          <div className="flex-1 p-md sm:p-lg md:p-xl print:p-0">
+        <main className={`flex-1 flex flex-col print:block print:overflow-visible ${
+          location.pathname === '/team' ? 'overflow-hidden' : 'overflow-y-auto'
+        }`}>
+          <div className={`flex-1 print:p-0 ${
+            location.pathname === '/team' ? 'p-0 h-full overflow-hidden' : 'p-md sm:p-lg md:p-xl'
+          }`}>
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />

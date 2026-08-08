@@ -82,7 +82,12 @@ export function useChat(activeConversationId: string | null) {
       })
 
       // Replace optimistic message with actual DB response
-      setMessages((prev) => prev.map((m) => (m.id === tempId ? realMsg : m)))
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === realMsg.id)) {
+          return prev.filter((m) => m.id !== tempId)
+        }
+        return prev.map((m) => (m.id === tempId ? realMsg : m))
+      })
       loadConversations() // reload to update latest message metadata
     } catch (e) {
       console.error('Failed to send message', e)

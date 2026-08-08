@@ -938,11 +938,11 @@ export const TeamManagementPage: React.FC = () => {
   }
 
   return (
-    <div className={`flex flex-col lg:flex-row h-[100dvh] lg:h-[calc(100vh-140px)] gap-md relative overflow-hidden bg-background text-text-primary ${
+    <div className={`flex flex-col lg:flex-row h-[calc(100dvh-4rem)] lg:h-[calc(100vh-140px)] gap-md relative overflow-hidden bg-background text-text-primary ${
       activeTab === 'chat' && activeChatId ? 'fixed inset-0 z-50 m-0 pb-0 rounded-none' : 'pb-16 lg:pb-0'
     }`}>
       {/* Persistent Left Sidebar */}
-      <div className={`w-full lg:w-80 h-[calc(100dvh-6rem)] mb-4 lg:h-auto lg:mb-0 flex flex-col rounded-2xl lg:rounded-3xl border border-border bg-card p-md shadow-sm no-print ${
+      <div className={`w-full lg:w-80 h-[calc(100dvh-8rem)] mb-4 lg:h-auto lg:mb-0 flex flex-col rounded-2xl lg:rounded-3xl border border-border bg-card p-md shadow-sm no-print ${
         activeTab === 'chat' && !activeChatId ? 'flex' : 'hidden lg:flex'
       }`}>
         {/* Workspace Title & Search */}
