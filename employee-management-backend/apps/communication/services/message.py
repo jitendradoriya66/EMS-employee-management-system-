@@ -79,7 +79,8 @@ class MessageService:
                     user=member.user,
                     title=title,
                     message=message_text,
-                    notification_type='personal'
+                    notification_type='personal',
+                    extra_data={'conversation_id': str(conversation.id)}
                 )
         except Exception as e:
             print("Failed to broadcast message via WebSocket/Notification:", e)

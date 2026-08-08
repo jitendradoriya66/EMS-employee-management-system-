@@ -4,6 +4,8 @@ import { useEmployees } from '@/hooks/useEmployees'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { getStatusColor, getStatusLabel, getDepartmentColor, formatDate } from '@/utils/helpers'
+import { UnifiedLoader } from '@/components/common/UnifiedLoader'
+import { ModernPagination } from '@/components/common/ModernPagination'
 
 interface StatCard {
   title: string
@@ -187,7 +189,7 @@ const BarChart: React.FC<BarChartProps> = ({ data, selectedDept, onSelectDept, t
   }
 
   return (
-    <div className="grid h-64 grid-cols-5 gap-sm sm:gap-md px-0 sm:px-sm md:px-md items-end">
+    <div className="grid h-64 gap-sm sm:gap-md px-0 sm:px-sm md:px-md items-end" style={{ gridTemplateColumns: `repeat(${data.length}, minmax(0, 1fr))` }}>
       {data.map((item, idx) => {
         const isSelected = selectedDept === item.name
         const isAnySelected = selectedDept !== null
@@ -259,10 +261,21 @@ const BarChart: React.FC<BarChartProps> = ({ data, selectedDept, onSelectDept, t
 // MAIN ANALYTICS PAGE MODULE
 // ----------------------------------------------------
 export const AnalyticsPage: React.FC = () => {
-  const { employees } = useEmployees()
+  const { employees, loading } = useEmployees()
   const [dateRange, setDateRange] = useState('all')
   const [selectedDept, setSelectedDept] = useState<string | null>(null)
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 8
+
+  // Reset pagination on filter change
+  React.useEffect(() => {
+    setCurrentPage(1)
+  }, [dateRange, selectedDept, selectedStatus])
+
+  if (loading) {
+    return <UnifiedLoader message="Loading organization analytics..." />
+  }
 
   const filterByDateRange = (startDateStr: string, range: string): boolean => {
     if (range === 'all') return true
@@ -354,6 +367,11 @@ export const AnalyticsPage: React.FC = () => {
       return true
     })
   }, [dateRange, selectedDept, selectedStatus, employees])
+
+  const paginatedEmployeesList = useMemo(() => {
+    const startIdx = (currentPage - 1) * itemsPerPage
+    return filteredEmployeesList.slice(startIdx, startIdx + itemsPerPage)
+  }, [filteredEmployeesList, currentPage, itemsPerPage])
 
   const insights: InsightCard[] = useMemo(() => {
     if (!employees) return []
@@ -676,8 +694,8 @@ export const AnalyticsPage: React.FC = () => {
             </thead>
             <tbody>
               <AnimatePresence mode="popLayout">
-                {filteredEmployeesList.length > 0 ? (
-                  filteredEmployeesList.map((emp) => (
+                {paginatedEmployeesList.length > 0 ? (
+                  paginatedEmployeesList.map((emp) => (
                     <motion.tr
                       key={emp.id}
                       layoutId={`row-${emp.id}`}
@@ -734,6 +752,15 @@ export const AnalyticsPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+        {filteredEmployeesList.length > itemsPerPage && (
+          <div className="mt-md">
+            <ModernPagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(filteredEmployeesList.length / itemsPerPage)}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
       </motion.div>
     </motion.div>
   )

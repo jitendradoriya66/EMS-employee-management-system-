@@ -15,6 +15,8 @@ import { Badge } from '@/components/common/Badge'
 import { ModernPagination } from '@/components/common/ModernPagination'
 import { useChat } from '@/hooks/useChat'
 import { socketManager } from '@/utils/websocket'
+import { useSearchParams } from 'react-router-dom'
+import { UnifiedLoader } from '@/components/common/UnifiedLoader'
 import {
   createConversation,
   scheduleMeeting,
@@ -69,7 +71,8 @@ export const TeamManagementPage: React.FC = () => {
   const role = user?.role ?? 'employee'
   const isEmployee = role === 'employee'
 
-  const { employees } = useEmployees()
+  const { employees, loading: employeesLoading } = useEmployees()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const currentEmployee = useMemo(() => {
     return employees.find(e => e.email?.toLowerCase() === user?.email?.toLowerCase())
@@ -81,6 +84,15 @@ export const TeamManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'chat' | 'meetings' | 'files'>('dashboard')
   
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const convoId = searchParams.get('conversation_id')
+    if (convoId) {
+      setActiveTab('chat')
+      setActiveChatId(convoId)
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
   const [inputText, setInputText] = useState('')
   const [replyingTo, setReplyingTo] = useState<any>(null)
 
@@ -920,6 +932,10 @@ export const TeamManagementPage: React.FC = () => {
   const totalSharedAssets = useMemo(() => {
     return files.length
   }, [files])
+
+  if (employeesLoading) {
+    return <UnifiedLoader message="Loading workspace team portal..." />
+  }
 
   return (
     <div className={`flex flex-col lg:flex-row h-[100dvh] lg:h-[calc(100vh-140px)] gap-md relative overflow-hidden bg-background text-text-primary ${

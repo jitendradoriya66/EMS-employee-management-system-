@@ -8,7 +8,7 @@ User = get_user_model()
 
 class NotificationService:
     @staticmethod
-    def create_notification(user, title, message, notification_type='personal'):
+    def create_notification(user, title, message, notification_type='personal', extra_data=None):
         """
         Creates a notification in database and broadcasts it in real-time.
         """
@@ -16,7 +16,8 @@ class NotificationService:
             user=user,
             title=title,
             message=message,
-            notification_type=notification_type
+            notification_type=notification_type,
+            extra_data=extra_data
         )
         
         # Broadcast via Django Channels

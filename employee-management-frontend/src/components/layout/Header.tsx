@@ -151,7 +151,9 @@ export const Header: React.FC<HeaderProps> = ({
                             setNotificationsOpen(false)
                             const titleLower = notif.title.toLowerCase()
                             
-                            if (titleLower.includes('leave')) {
+                            if (notif.extra_data && notif.extra_data.conversation_id) {
+                              navigate(`/team?conversation_id=${notif.extra_data.conversation_id}`)
+                            } else if (titleLower.includes('leave')) {
                               navigate('/leave')
                             } else if (titleLower.includes('task')) {
                               navigate('/team')

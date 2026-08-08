@@ -12,6 +12,7 @@ class Notification(models.Model):
     message = models.TextField()
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    extra_data = models.JSONField(null=True, blank=True)
 
     class Meta:
         db_table = "notifications"
